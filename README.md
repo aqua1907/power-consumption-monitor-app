@@ -2,6 +2,8 @@
 
 Power Monitor is a Windows notification-area app for a Deye hybrid inverter on the local network. It shows battery state of charge, whether the pack is charging or discharging, apartment load, how long backup would last if the grid dropped now, and this PC’s own power draw.
 
+![The flyout, with the battery at 99 percent, the grid on, and the last 30 minutes of battery power](docs/flyout.png)
+
 The flyout is compact and stays out of Alt+Tab. Left-click the tray icon to show or hide it. Press Esc or click outside to hide it, unless it is pinned. Right-click the icon for Settings or Exit. Starting the app again focuses the copy that is already running. Settings and Find logger open as their own windows.
 
 ## Requirements
