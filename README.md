@@ -16,6 +16,10 @@ Current Modbus TCP loggers use port 502 and unit id 1. On firmware 1.7.x, turn M
 
 This PC’s watts come from LibreHardwareMonitor: PawnIO for AMD package power and the NVIDIA libraries for GPU power, plus a baseline you can set in Settings (40 W by default). If either reading is missing, that part of the PC total stays empty.
 
+## Download
+
+The current build is on the [releases page](https://github.com/aqua1907/power-consumption-monitor-app/releases). Download `PowerMonitor-win-x64.zip`, extract the whole folder, and run `PowerMonitor.exe`. The .NET runtime is included. A single extracted exe, without the files next to it, will not start.
+
 ## Run
 
 From the repository root:

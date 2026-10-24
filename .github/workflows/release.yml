@@ -1,0 +1,46 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Test
+        run: dotnet test PowerMonitor.sln -c Release
+
+      - name: Publish
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}" -replace '^v', ''
+          dotnet publish src\PowerMonitor\PowerMonitor.csproj -c Release -r win-x64 --self-contained true -p:Version=$version
+
+      - name: Zip
+        shell: pwsh
+        run: |
+          $publish = "src\PowerMonitor\bin\Release\net8.0-windows10.0.19041.0\win-x64\publish"
+          Compress-Archive -Path (Join-Path $publish "*") -DestinationPath PowerMonitor-win-x64.zip
+
+      - name: GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          $notes = @(
+            "Extract the zip and run PowerMonitor.exe. This is a 64-bit build for Windows 10 version 1809 or later. The .NET runtime is included, so nothing else has to be installed."
+            ""
+            "AMD package power still needs PawnIO on the PC. NVIDIA GPU power uses the libraries already in the zip."
+          ) -join "`n"
+          gh release create "${{ github.ref_name }}" PowerMonitor-win-x64.zip --title "${{ github.ref_name }}" --notes $notes
