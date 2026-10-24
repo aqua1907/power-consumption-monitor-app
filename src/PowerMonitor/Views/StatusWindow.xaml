@@ -1,0 +1,285 @@
+<Window
+    x:Class="PowerMonitor.Views.StatusWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:PowerMonitor.Controls"
+    Title="Power monitor">
+    <Grid x:Name="Root" KeyDown="Root_KeyDown">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <VisualStateManager.VisualStateGroups>
+            <VisualStateGroup>
+                <VisualState x:Name="Narrow" />
+                <VisualState x:Name="Wide">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="640" />
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="DetailColumn.Width" Value="*" />
+                        <Setter Target="SummaryRow.Height" Value="*" />
+                        <Setter Target="DetailRow.Height" Value="0" />
+                        <Setter Target="Details.(Grid.Row)" Value="0" />
+                        <Setter Target="Details.(Grid.Column)" Value="1" />
+                    </VisualState.Setters>
+                </VisualState>
+            </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
+
+        <Grid Height="44" Padding="16,0,6,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Grid x:Name="DragArea" Background="Transparent">
+                <StackPanel VerticalAlignment="Center" Orientation="Horizontal" Spacing="8">
+                    <Ellipse
+                        x:Name="StatusDot"
+                        Width="8"
+                        Height="8"
+                        VerticalAlignment="Center"
+                        Fill="{ThemeResource SystemFillColorNeutralBrush}" />
+                    <TextBlock
+                        x:Name="SummaryText"
+                        Style="{StaticResource BodyStrongTextBlockStyle}"
+                        Text="Connecting…"
+                        TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+            </Grid>
+            <ToggleButton
+                x:Name="PinButton"
+                Grid.Column="1"
+                Width="36"
+                Height="32"
+                Padding="0"
+                AutomationProperties.Name="Keep open"
+                Background="Transparent"
+                BorderThickness="0"
+                ToolTipService.ToolTip="Keep open">
+                <FontIcon FontSize="14" Glyph="&#xE718;" />
+            </ToggleButton>
+            <Button
+                Grid.Column="2"
+                Margin="2,0,0,0"
+                AutomationProperties.Name="Settings"
+                Click="Settings_Click"
+                Style="{StaticResource IconButtonStyle}"
+                ToolTipService.ToolTip="Settings">
+                <FontIcon FontSize="14" Glyph="&#xE713;" />
+            </Button>
+        </Grid>
+
+        <Grid
+            Grid.Row="1"
+            Padding="12,0,12,12"
+            ColumnSpacing="8"
+            RowSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition x:Name="DetailColumn" Width="0" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition x:Name="SummaryRow" Height="Auto" />
+                    <RowDefinition x:Name="DetailRow" Height="*" />
+                </Grid.RowDefinitions>
+
+                <StackPanel Spacing="8">
+                    <Border Padding="16,10,16,14" Style="{StaticResource CardStyle}">
+                        <StackPanel Spacing="10">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock
+                                    x:Name="SocText"
+                                    FontSize="40"
+                                    FontWeight="SemiBold"
+                                    Text="--%" />
+                                <StackPanel
+                                    x:Name="RuntimePanel"
+                                    Grid.Column="1"
+                                    VerticalAlignment="Center">
+                                    <TextBlock
+                                        HorizontalAlignment="Right"
+                                        Style="{StaticResource SecondaryCaptionStyle}"
+                                        Text="Backup time" />
+                                    <TextBlock
+                                        x:Name="RuntimeText"
+                                        HorizontalAlignment="Right"
+                                        Style="{StaticResource SubtitleTextBlockStyle}"
+                                        Text="—" />
+                                </StackPanel>
+                            </Grid>
+                            <controls:BatteryBar x:Name="Battery" />
+                            <Grid>
+                                <TextBlock
+                                    x:Name="FlowText"
+                                    Style="{StaticResource SecondaryCaptionStyle}"
+                                    Text="Waiting for the first reading" />
+                                <TextBlock
+                                    x:Name="EnergyText"
+                                    HorizontalAlignment="Right"
+                                    Style="{StaticResource SecondaryCaptionStyle}" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource CardStyle}">
+                        <Grid ColumnSpacing="4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="72" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="72" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="72" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel x:Name="GridNode" Spacing="2">
+                                <Border
+                                    Width="32"
+                                    Height="32"
+                                    HorizontalAlignment="Center"
+                                    Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                    CornerRadius="16">
+                                    <FontIcon FontSize="15" Glyph="&#xE945;" />
+                                </Border>
+                                <TextBlock
+                                    x:Name="GridValue"
+                                    Margin="0,4,0,0"
+                                    HorizontalAlignment="Center"
+                                    Style="{StaticResource BodyStrongTextBlockStyle}"
+                                    Text="—" />
+                                <TextBlock
+                                    HorizontalAlignment="Center"
+                                    Style="{StaticResource SecondaryCaptionStyle}"
+                                    Text="Grid" />
+                            </StackPanel>
+
+                            <controls:FlowLine
+                                x:Name="GridLine"
+                                Grid.Column="1"
+                                Margin="0,13,0,0"
+                                VerticalAlignment="Top" />
+
+                            <StackPanel Grid.Column="2" Spacing="2">
+                                <Border
+                                    Width="32"
+                                    Height="32"
+                                    HorizontalAlignment="Center"
+                                    Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                    CornerRadius="16">
+                                    <FontIcon FontSize="15" Glyph="&#xE80F;" />
+                                </Border>
+                                <TextBlock
+                                    x:Name="HomeValue"
+                                    Margin="0,4,0,0"
+                                    HorizontalAlignment="Center"
+                                    Style="{StaticResource BodyStrongTextBlockStyle}"
+                                    Text="—" />
+                                <TextBlock
+                                    HorizontalAlignment="Center"
+                                    Style="{StaticResource SecondaryCaptionStyle}"
+                                    Text="Home" />
+                            </StackPanel>
+
+                            <controls:FlowLine
+                                x:Name="BatteryLine"
+                                Grid.Column="3"
+                                Margin="0,13,0,0"
+                                VerticalAlignment="Top" />
+
+                            <StackPanel Grid.Column="4" Spacing="2">
+                                <Border
+                                    Width="32"
+                                    Height="32"
+                                    HorizontalAlignment="Center"
+                                    Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                    CornerRadius="16">
+                                    <FontIcon FontSize="15" Glyph="&#xE83F;" />
+                                </Border>
+                                <TextBlock
+                                    x:Name="BatteryValue"
+                                    Margin="0,4,0,0"
+                                    HorizontalAlignment="Center"
+                                    Style="{StaticResource BodyStrongTextBlockStyle}"
+                                    Text="—" />
+                                <TextBlock
+                                    HorizontalAlignment="Center"
+                                    Style="{StaticResource SecondaryCaptionStyle}"
+                                    Text="Battery" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+
+                <Grid
+                    x:Name="Details"
+                    Grid.Row="1"
+                    RowSpacing="8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Border Style="{StaticResource CardStyle}">
+                        <Grid RowSpacing="6">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid>
+                                <TextBlock Style="{StaticResource SecondaryCaptionStyle}" Text="Battery, last 30 minutes" />
+                                <TextBlock
+                                    x:Name="ScaleText"
+                                    HorizontalAlignment="Right"
+                                    Style="{StaticResource TertiaryCaptionStyle}" />
+                            </Grid>
+                            <controls:PowerHistoryChart
+                                x:Name="HistoryChart"
+                                Grid.Row="1"
+                                MinHeight="56" />
+                            <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="12">
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                    <Ellipse
+                                        Width="6"
+                                        Height="6"
+                                        VerticalAlignment="Center"
+                                        Fill="{ThemeResource SystemFillColorSuccessBrush}" />
+                                    <TextBlock Style="{StaticResource TertiaryCaptionStyle}" Text="Charging" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                    <Ellipse
+                                        Width="6"
+                                        Height="6"
+                                        VerticalAlignment="Center"
+                                        Fill="{ThemeResource SystemFillColorCautionBrush}" />
+                                    <TextBlock Style="{StaticResource TertiaryCaptionStyle}" Text="Discharging" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <Grid Grid.Row="1" Padding="4,0">
+                        <TextBlock x:Name="PcText" Style="{StaticResource SecondaryCaptionStyle}" />
+                        <TextBlock
+                            x:Name="UpdatedText"
+                            HorizontalAlignment="Right"
+                            Style="{StaticResource TertiaryCaptionStyle}" />
+                    </Grid>
+
+                    <InfoBar
+                        x:Name="ErrorBar"
+                        Grid.Row="2"
+                        IsClosable="False"
+                        IsOpen="False"
+                        Severity="Error"
+                        Title="Last reading failed" />
+                </Grid>
+        </Grid>
+    </Grid>
+</Window>

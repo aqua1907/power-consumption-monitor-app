@@ -1,0 +1,184 @@
+<Window
+    x:Class="PowerMonitor.Views.SettingsWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Power monitor settings">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="32" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock
+            Margin="16,0,0,0"
+            VerticalAlignment="Center"
+            Style="{StaticResource CaptionTextBlockStyle}"
+            Text="Power monitor" />
+
+        <ScrollViewer Grid.Row="1">
+            <StackPanel
+                MaxWidth="640"
+                Margin="20,8,20,20"
+                Spacing="8">
+                <TextBlock Style="{StaticResource TitleTextBlockStyle}" Text="Settings" />
+                <TextBlock
+                    Style="{StaticResource SecondaryCaptionStyle}"
+                    Text="Read only. The monitor never changes inverter settings."
+                    TextWrapping="Wrap" />
+
+                <TextBlock
+                    Margin="0,12,0,0"
+                    Style="{StaticResource BodyStrongTextBlockStyle}"
+                    Text="Connection" />
+                <Border Padding="16" Style="{StaticResource CardStyle}">
+                    <StackPanel Spacing="12">
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <ComboBox
+                                x:Name="ProtocolBox"
+                                HorizontalAlignment="Stretch"
+                                Header="Protocol"
+                                SelectionChanged="ProtocolBox_SelectionChanged">
+                                <ComboBoxItem Content="Modbus TCP" />
+                                <ComboBoxItem Content="Solarman V5" />
+                            </ComboBox>
+                            <TextBox
+                                x:Name="HostBox"
+                                Grid.Column="1"
+                                Header="Logger address"
+                                PlaceholderText="192.168.1.50" />
+                        </Grid>
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <NumberBox
+                                x:Name="PortBox"
+                                Header="Port"
+                                Maximum="65535"
+                                Minimum="1"
+                                SpinButtonPlacementMode="Compact" />
+                            <NumberBox
+                                x:Name="UnitIdBox"
+                                Grid.Column="1"
+                                Header="Unit ID"
+                                Maximum="247"
+                                Minimum="1"
+                                SpinButtonPlacementMode="Compact" />
+                            <NumberBox
+                                x:Name="OffsetBox"
+                                Grid.Column="2"
+                                Header="Address offset"
+                                Maximum="1"
+                                Minimum="0"
+                                SpinButtonPlacementMode="Compact" />
+                        </Grid>
+                        <NumberBox
+                            x:Name="IntervalBox"
+                            Header="Update every (seconds)"
+                            Maximum="3600"
+                            Minimum="1"
+                            SpinButtonPlacementMode="Compact" />
+                        <TextBox
+                            x:Name="SerialBox"
+                            Header="Logger serial (Solarman V5 only)"
+                            PlaceholderText="Printed on the Wi-Fi stick" />
+                        <CheckBox x:Name="InvertToggle" Content="Flip battery power sign" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Click="Find_Click" Content="Find logger" />
+                            <Button
+                                x:Name="TestButton"
+                                Click="Test_Click"
+                                Content="Test connection" />
+                        </StackPanel>
+                        <TextBlock
+                            Style="{StaticResource SecondaryCaptionStyle}"
+                            Text="Logger firmware 1.7.x uses Modbus TCP on port 502 (enable it on Link 2). Older sticks use Solarman V5 on port 8899 with the stick serial. If the percentage looks wrong, change the offset. If charging and discharging are swapped, flip the sign."
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+
+                <TextBlock
+                    Margin="0,12,0,0"
+                    Style="{StaticResource BodyStrongTextBlockStyle}"
+                    Text="Battery" />
+                <Border Padding="16" Style="{StaticResource CardStyle}">
+                    <StackPanel Spacing="12">
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <NumberBox
+                                x:Name="ReserveBox"
+                                Header="Reserve %"
+                                Maximum="90"
+                                Minimum="0"
+                                SpinButtonPlacementMode="Compact" />
+                            <NumberBox
+                                x:Name="PacksBox"
+                                Grid.Column="1"
+                                Header="Packs"
+                                Maximum="64"
+                                Minimum="1"
+                                SpinButtonPlacementMode="Compact" />
+                            <NumberBox
+                                x:Name="BaselineBox"
+                                Grid.Column="2"
+                                Header="PC baseline W"
+                                Maximum="2000"
+                                Minimum="0"
+                                SpinButtonPlacementMode="Compact" />
+                        </Grid>
+                        <TextBlock
+                            Style="{StaticResource SecondaryCaptionStyle}"
+                            Text="Each SE-G5.1 Pro-B pack holds 5.12 kWh. Backup time uses the home load and stops at the reserve. PC power is an estimate and is not used for backup time."
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+
+                <TextBlock
+                    Margin="0,12,0,0"
+                    Style="{StaticResource BodyStrongTextBlockStyle}"
+                    Text="Windows" />
+                <Border Padding="16,8" Style="{StaticResource CardStyle}">
+                    <StackPanel>
+                        <CheckBox x:Name="StartupToggle" Content="Start with Windows" />
+                        <CheckBox x:Name="GridNotificationToggle" Content="Notify when the grid drops" />
+                        <CheckBox x:Name="SocNotificationToggle" Content="Notify when the battery falls to 20%" />
+                    </StackPanel>
+                </Border>
+
+                <InfoBar
+                    x:Name="ResultBar"
+                    Margin="0,8,0,0"
+                    IsClosable="False"
+                    IsOpen="False" />
+            </StackPanel>
+        </ScrollViewer>
+
+        <Border
+            Grid.Row="2"
+            Padding="20,12"
+            BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+            BorderThickness="0,1,0,0">
+            <StackPanel
+                HorizontalAlignment="Right"
+                Orientation="Horizontal"
+                Spacing="8">
+                <Button Click="Cancel_Click" Content="Cancel" />
+                <Button
+                    Click="Save_Click"
+                    Content="Save"
+                    Style="{StaticResource AccentButtonStyle}" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>
