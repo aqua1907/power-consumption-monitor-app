@@ -10,6 +10,7 @@ public sealed record LoggerEndpoint(string IpAddress, int Port, uint? Serial, st
 public static class LoggerFinder
 {
     private const int SolarmanDiscoveryPort = 48899;
+    private const int MaxBroadcastReplies = 256;
     private static readonly byte[] DiscoveryRequest = Encoding.ASCII.GetBytes("WIFIKIT-214028-READ");
 
     public static async Task<IReadOnlyList<LoggerEndpoint>> FindAsync(CancellationToken cancellationToken)
@@ -54,6 +55,7 @@ public static class LoggerFinder
     private static IReadOnlyList<LoggerEndpoint> DiscoverByBroadcast(CancellationToken cancellationToken)
     {
         var found = new List<LoggerEndpoint>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
         using var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
         try
         {
@@ -71,7 +73,7 @@ public static class LoggerFinder
 
             var buffer = new byte[512];
             var deadline = DateTime.UtcNow.AddMilliseconds(1500);
-            while (DateTime.UtcNow < deadline)
+            while (DateTime.UtcNow < deadline && found.Count < MaxBroadcastReplies)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (!socket.Poll(200_000, SelectMode.SelectRead))
@@ -88,7 +90,9 @@ public static class LoggerFinder
                     break;
                 }
 
-                if (TryParseDiscovery(buffer.AsSpan(0, length), out var endpoint))
+                var sender = ((IPEndPoint)remote).Address;
+                if (TryParseDiscovery(buffer.AsSpan(0, length), sender, out var endpoint) &&
+                    seen.Add(endpoint.IpAddress))
                     found.Add(endpoint);
             }
         }
@@ -157,12 +161,15 @@ public static class LoggerFinder
         }
     }
 
-    private static bool TryParseDiscovery(ReadOnlySpan<byte> data, out LoggerEndpoint endpoint)
+    public static bool TryParseDiscovery(ReadOnlySpan<byte> data, IPAddress sender, out LoggerEndpoint endpoint)
     {
         endpoint = new LoggerEndpoint("", 0, null, "Solarman broadcast");
         var text = Encoding.ASCII.GetString(data).Trim('\0', ' ', '\r', '\n');
         var parts = text.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         if (parts.Length == 0 || !IPAddress.TryParse(parts[0], out var ip) || ip.AddressFamily != AddressFamily.InterNetwork)
+            return false;
+        // A reply may only advertise its own address, so one LAN host cannot plant fake loggers.
+        if (!ip.Equals(sender.IsIPv4MappedToIPv6 ? sender.MapToIPv4() : sender))
             return false;
 
         uint? serial = null;

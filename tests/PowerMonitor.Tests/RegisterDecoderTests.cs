@@ -54,6 +54,21 @@ public class RegisterDecoderTests
         Assert.Contains("address offset", error.Message, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData(DeyeRegisters.GridConnected, 2)]
+    [InlineData(DeyeRegisters.BatteryVoltage, 7001)]
+    [InlineData(DeyeRegisters.LoadPower, 20_001)]
+    [InlineData(DeyeRegisters.GridPower, 20_001)]
+    [InlineData(DeyeRegisters.BatteryPower, 20_001)]
+    public void Rejects_values_this_inverter_cannot_report(ushort address, ushort value)
+    {
+        var words = Sample();
+        words[DeyeRegisters.Index(address)] = value;
+
+        Assert.Throws<InvalidOperationException>(() =>
+            RegisterDecoder.Decode(words, invertPowerSign: false, DateTimeOffset.UnixEpoch));
+    }
+
     private static ushort[] Sample()
     {
         var words = new ushort[DeyeRegisters.BlockCount];

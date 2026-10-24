@@ -61,6 +61,7 @@ internal sealed class MonitorLoop : IDisposable
     {
         InverterSnapshot? last = null;
         string? connectionKey = null;
+        var guard = new SocJumpGuard();
 
         while (!cancellationToken.IsCancellationRequested)
         {
@@ -69,6 +70,7 @@ internal sealed class MonitorLoop : IDisposable
             if (key != connectionKey)
             {
                 last = null;
+                guard.Reset();
                 connectionKey = key;
             }
 
@@ -76,7 +78,11 @@ internal sealed class MonitorLoop : IDisposable
             string? error = null;
             try
             {
-                last = await DeyeClient.ReadAsync(settings, cancellationToken);
+                var reading = await DeyeClient.ReadAsync(settings, cancellationToken);
+                if (guard.Accept(reading))
+                    last = reading;
+                else
+                    error = $"Battery jumped from {last?.SocPercent}% to {reading.SocPercent}%. Waiting for the next reading to confirm it.";
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {

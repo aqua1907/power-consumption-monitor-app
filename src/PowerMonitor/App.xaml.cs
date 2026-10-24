@@ -102,9 +102,9 @@ public sealed partial class App : Application
             return;
 
         _status.Apply(update, _settings.Current.ReserveSocPercent);
-        var soc = update.Inverter?.SocPercent;
-        var grid = update.Inverter?.GridConnected;
-        var failed = update.Error is not null && update.Inverter is null;
+        var failed = update.Error is not null;
+        var soc = failed ? null : update.Inverter?.SocPercent;
+        var grid = failed ? null : update.Inverter?.GridConnected;
         var iconPixels = MonitorMetrics.TrayIconPixels();
         if (soc != _iconSoc || grid != _iconGrid || failed != _iconFailed || iconPixels != _iconPixels)
         {
@@ -199,8 +199,12 @@ public sealed partial class App : Application
 
     private static string Tooltip(MonitorUpdate update)
     {
+        if (update.Error is not null)
+            return update.Inverter is null
+                ? update.Error
+                : $"Stale since {update.Inverter.ReadAt.LocalDateTime:HH:mm}: {update.Error}";
         if (update.Inverter is null)
-            return string.IsNullOrWhiteSpace(update.Error) ? "Power monitor" : update.Error;
+            return "Power monitor";
 
         var grid = update.Inverter.GridConnected ? "Grid on" : "Grid off";
         var backup = update.Backup?.DurationText ?? "—";
