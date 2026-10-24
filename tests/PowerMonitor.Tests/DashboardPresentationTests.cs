@@ -44,7 +44,7 @@ public sealed class DashboardPresentationTests
         Assert.EndsWith(" kW", state.FlowSummary);
         Assert.Equal("12 h 25 m", state.Runtime);
         Assert.Equal($"{4.3:0.0} kWh usable", state.UsableEnergy);
-        Assert.Equal("23:52:09", state.Updated);
+        Assert.Equal(readAt.LocalDateTime.ToString("HH:mm:ss"), state.Updated);
     }
 
     [Theory]
