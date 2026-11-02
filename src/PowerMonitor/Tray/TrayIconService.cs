@@ -28,6 +28,7 @@ internal sealed class TrayIconService : IDisposable
     private const int OpenCommand = 1;
     private const int SettingsCommand = 2;
     private const int ExitCommand = 3;
+    private const int HistoryCommand = 4;
     private static readonly IntPtr HwndMessage = new(-3);
 
     private readonly DispatcherQueue _dispatcher;
@@ -41,6 +42,7 @@ internal sealed class TrayIconService : IDisposable
     public event Action? OpenRequested;
     public event Action? ToggleRequested;
     public event Action? SettingsRequested;
+    public event Action? HistoryRequested;
     public event Action? ExitRequested;
 
     public TrayIconService(DispatcherQueue dispatcher, Icon icon)
@@ -161,6 +163,7 @@ internal sealed class TrayIconService : IDisposable
         try
         {
             AppendMenu(menu, MfString, OpenCommand, "Open dashboard");
+            AppendMenu(menu, MfString, HistoryCommand, "History");
             AppendMenu(menu, MfString, SettingsCommand, "Settings");
             AppendMenu(menu, MfSeparator, 0, "");
             AppendMenu(menu, MfString, ExitCommand, "Exit");
@@ -180,6 +183,9 @@ internal sealed class TrayIconService : IDisposable
                 {
                     case OpenCommand:
                         OpenRequested?.Invoke();
+                        break;
+                    case HistoryCommand:
+                        HistoryRequested?.Invoke();
                         break;
                     case SettingsCommand:
                         SettingsRequested?.Invoke();

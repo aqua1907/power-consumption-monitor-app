@@ -4,7 +4,6 @@ public sealed record AppSettings
 {
     public const decimal PackCapacityKwh = 5.12m;
     public const int IdleLoadWatts = 50;
-    public const int LowSocPercent = 20;
     public const int MinPollIntervalSeconds = 1;
     public const int MaxPollIntervalSeconds = 3600;
 
@@ -16,6 +15,7 @@ public sealed record AppSettings
     public bool InvertPowerSign { get; init; }
     public int RegisterAddressOffset { get; init; }
     public int ReserveSocPercent { get; init; } = 10;
+    public int LowSocAlertPercent { get; init; } = 20;
     public int PackCount { get; init; } = 1;
     public int PcBaselineWatts { get; init; } = 40;
     public int PollIntervalSeconds { get; init; } = 10;

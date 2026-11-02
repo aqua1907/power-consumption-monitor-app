@@ -232,17 +232,11 @@
                                 <RowDefinition Height="*" />
                                 <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
-                            <Grid>
-                                <TextBlock Style="{StaticResource SecondaryCaptionStyle}" Text="Battery, last 30 minutes" />
-                                <TextBlock
-                                    x:Name="ScaleText"
-                                    HorizontalAlignment="Right"
-                                    Style="{StaticResource TertiaryCaptionStyle}" />
-                            </Grid>
+                            <TextBlock Style="{StaticResource SecondaryCaptionStyle}" Text="Battery power" />
                             <controls:PowerHistoryChart
                                 x:Name="HistoryChart"
                                 Grid.Row="1"
-                                MinHeight="56" />
+                                MinHeight="96" />
                             <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="12">
                                 <StackPanel Orientation="Horizontal" Spacing="5">
                                     <Ellipse

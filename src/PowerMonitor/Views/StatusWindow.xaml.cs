@@ -18,9 +18,11 @@ internal sealed partial class StatusWindow : Window
     private const double MinimumHeight = 300;
     private const double EdgeMargin = 12;
     private static readonly TimeSpan ReopenGuard = TimeSpan.FromMilliseconds(400);
+    private static readonly TimeSpan HistorySaveThrottle = TimeSpan.FromSeconds(20);
     private readonly PowerHistory _history = new();
     private readonly AppWindow _appWindow;
     private DateTimeOffset? _lastHistorySample;
+    private DateTimeOffset _lastHistorySave = DateTimeOffset.MinValue;
     private DateTime _hiddenAt = DateTime.MinValue;
     private bool _placed;
     private bool _correctingSize;
@@ -50,11 +52,38 @@ internal sealed partial class StatusWindow : Window
 
     public AppWindow NativeAppWindow => _appWindow;
 
-    public void Apply(MonitorUpdate update, int reservePercent)
+    /// <summary>Seeds the chart with history saved from a previous run.</summary>
+    public void LoadHistory(IReadOnlyList<PowerSample> samples)
+    {
+        if (samples.Count == 0)
+            return;
+
+        try
+        {
+            foreach (var sample in samples)
+                _history.Add(sample);
+            _lastHistorySample = samples[^1].At;
+            HistoryChart.Apply(_history);
+        }
+        catch (ArgumentException)
+        {
+            // Corrupt or out-of-order backup; start fresh rather than fail to launch.
+            _history.Clear();
+            _lastHistorySample = null;
+        }
+    }
+
+    /// <summary>A snapshot of the retained history, safe to use off the UI thread (e.g. for CSV export).</summary>
+    public IReadOnlyList<PowerSample> HistorySnapshot() => _history.Samples.ToArray();
+
+    /// <summary>Forces an immediate save; used before the app exits so the last few readings aren't lost.</summary>
+    public void PersistHistory() => PowerHistoryStore.Save(_history.Samples.ToArray());
+
+    public void Apply(MonitorUpdate update, AppSettings settings)
     {
         var state = DashboardPresentation.Create(update.Inverter, update.Backup, update.Error);
         SummaryText.Text = state.Summary;
-        StatusDot.Fill = Theme(StatusKey(state));
+        StatusDot.Fill = Theme(StatusKey(state, settings.LowSocAlertPercent));
         SocText.Text = state.HasData ? $"{state.SocPercent}%" : "--%";
         RuntimeText.Text = state.Runtime;
         ToolTipService.SetToolTip(RuntimePanel, state.RuntimeHint);
@@ -63,10 +92,10 @@ internal sealed partial class StatusWindow : Window
 
         var batteryBrush = Theme(state.Flow == BatteryFlow.Discharging
             ? "SystemFillColorCautionBrush"
-            : state.SocPercent <= AppSettings.LowSocPercent && state.HasData
+            : state.SocPercent <= settings.LowSocAlertPercent && state.HasData
                 ? "SystemFillColorCriticalBrush"
                 : "SystemFillColorSuccessBrush");
-        Battery.Apply(state.HasData ? state.SocPercent : 0, reservePercent, state.Flow, batteryBrush);
+        Battery.Apply(state.HasData ? state.SocPercent : 0, settings.ReserveSocPercent, state.Flow, batteryBrush);
 
         GridValue.Text = !state.HasData ? "—"
             : state.GridConnected ? DashboardPresentation.FormatPower(state.GridPowerWatts)
@@ -99,7 +128,14 @@ internal sealed partial class StatusWindow : Window
             _history.Add(new PowerSample(inverter.ReadAt, inverter.BatteryPowerWatts, inverter.LoadPowerWatts));
             _lastHistorySample = inverter.ReadAt;
             HistoryChart.Apply(_history);
-            ScaleText.Text = HistoryChart.ScaleLabel;
+
+            var now = DateTimeOffset.UtcNow;
+            if (now - _lastHistorySave >= HistorySaveThrottle)
+            {
+                _lastHistorySave = now;
+                var snapshot = _history.Samples.ToArray();
+                _ = Task.Run(() => PowerHistoryStore.Save(snapshot));
+            }
         }
 
         ErrorBar.Message = state.Error ?? "";
@@ -157,11 +193,11 @@ internal sealed partial class StatusWindow : Window
 
     private static Brush Theme(string key) => (Brush)Application.Current.Resources[key];
 
-    private static string StatusKey(DashboardState state)
+    private static string StatusKey(DashboardState state, int lowSocAlertPercent)
     {
         if (!state.HasData)
             return state.Error is null ? "SystemFillColorNeutralBrush" : "SystemFillColorCriticalBrush";
-        if (state.SocPercent <= AppSettings.LowSocPercent)
+        if (state.SocPercent <= lowSocAlertPercent)
             return "SystemFillColorCriticalBrush";
         return state.GridConnected ? "SystemFillColorSuccessBrush" : "SystemFillColorCautionBrush";
     }

@@ -3,7 +3,6 @@ using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Drawing.Text;
 using System.Runtime.InteropServices;
-using PowerMonitor.Core.Settings;
 
 namespace PowerMonitor.Ui;
 
@@ -12,7 +11,7 @@ internal static class BatteryIcon
     [DllImport("user32.dll", CharSet = CharSet.Auto)]
     private static extern bool DestroyIcon(IntPtr handle);
 
-    public static Icon Create(int? soc, bool? gridOn, bool failed, int pixels = 32)
+    public static Icon Create(int? soc, bool? gridOn, bool failed, int pixels = 32, int lowSocAlertPercent = 20)
     {
         pixels = Math.Clamp(pixels, 16, 256);
         using var bitmap = new Bitmap(pixels, pixels, PixelFormat.Format32bppArgb);
@@ -22,7 +21,7 @@ internal static class BatteryIcon
         graphics.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
         graphics.Clear(Color.Transparent);
         var inset = Math.Max(1, pixels / 16);
-        using (var brush = new SolidBrush(ColorFor(soc, gridOn, failed)))
+        using (var brush = new SolidBrush(ColorFor(soc, gridOn, failed, lowSocAlertPercent)))
             graphics.FillRectangle(brush, inset, inset, pixels - inset * 2, pixels - inset * 2);
 
         var text = soc?.ToString() ?? (failed ? "!" : "--");
@@ -44,9 +43,9 @@ internal static class BatteryIcon
         }
     }
 
-    private static Color ColorFor(int? soc, bool? gridOn, bool failed)
+    private static Color ColorFor(int? soc, bool? gridOn, bool failed, int lowSocAlertPercent)
     {
-        if (soc is <= AppSettings.LowSocPercent || (failed && soc is null))
+        if (soc <= lowSocAlertPercent || (failed && soc is null))
             return Color.FromArgb(255, 111, 125);
         if (gridOn == false)
             return Color.FromArgb(255, 180, 94);

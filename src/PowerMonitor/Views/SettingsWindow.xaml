@@ -137,9 +137,15 @@
                                 Minimum="0"
                                 SpinButtonPlacementMode="Compact" />
                         </Grid>
+                        <NumberBox
+                            x:Name="LowSocThresholdBox"
+                            Header="Low battery alert threshold %"
+                            Maximum="90"
+                            Minimum="1"
+                            SpinButtonPlacementMode="Compact" />
                         <TextBlock
                             Style="{StaticResource SecondaryCaptionStyle}"
-                            Text="Each SE-G5.1 Pro-B pack holds 5.12 kWh. Backup time uses the home load and stops at the reserve. PC power is an estimate and is not used for backup time."
+                            Text="Each SE-G5.1 Pro-B pack holds 5.12 kWh. Backup time uses the home load and stops at the reserve. PC power is an estimate and is not used for backup time. The alert threshold also turns the tray icon and dashboard red."
                             TextWrapping="Wrap" />
                     </StackPanel>
                 </Border>
@@ -152,7 +158,7 @@
                     <StackPanel>
                         <CheckBox x:Name="StartupToggle" Content="Start with Windows" />
                         <CheckBox x:Name="GridNotificationToggle" Content="Notify when the grid drops" />
-                        <CheckBox x:Name="SocNotificationToggle" Content="Notify when the battery falls to 20%" />
+                        <CheckBox x:Name="SocNotificationToggle" Content="Notify when the battery is low" />
                     </StackPanel>
                 </Border>
 

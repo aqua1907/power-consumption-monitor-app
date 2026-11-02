@@ -2,6 +2,7 @@ using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using PowerMonitor.Core.Deye;
+using PowerMonitor.Core.Presentation;
 using PowerMonitor.Core.Settings;
 using PowerMonitor.Monitoring;
 using PowerMonitor.Pc;
@@ -21,9 +22,11 @@ public sealed partial class App : Application
     private PcPowerReader? _pc;
     private StatusWindow? _status;
     private SettingsWindow? _settingsWindow;
+    private HistoryWindow? _historyWindow;
     private MonitorLoop? _loop;
     private TrayIconService? _tray;
     private readonly AlertState _alerts = new();
+    private OutageLog? _outages;
     private int? _iconSoc;
     private int _iconPixels;
     private bool? _iconGrid;
@@ -51,8 +54,10 @@ public sealed partial class App : Application
             _settings = new SettingsHolder(loadedSettings);
             _pc = new PcPowerReader();
             _status = new StatusWindow();
+            _status.LoadHistory(PowerHistoryStore.Load());
             _status.SettingsRequested += (_, _) => ShowSettings();
             _status.NativeAppWindow.Closing += StatusClosing;
+            _outages = new OutageLog(OutageLogStore.Load());
 
             try
             {
@@ -70,6 +75,7 @@ public sealed partial class App : Application
             _tray.OpenRequested += ShowStatus;
             _tray.ToggleRequested += () => _status?.ToggleDashboard();
             _tray.SettingsRequested += ShowSettings;
+            _tray.HistoryRequested += ShowHistory;
             _tray.ExitRequested += ExitApplication;
 
             _showWait = ThreadPool.RegisterWaitForSingleObject(
@@ -101,14 +107,16 @@ public sealed partial class App : Application
         if (_status is null || _tray is null || _settings is null)
             return;
 
-        _status.Apply(update, _settings.Current.ReserveSocPercent);
+        _status.Apply(update, _settings.Current);
         var failed = update.Error is not null;
         var soc = failed ? null : update.Inverter?.SocPercent;
         var grid = failed ? null : update.Inverter?.GridConnected;
         var iconPixels = MonitorMetrics.TrayIconPixels();
         if (soc != _iconSoc || grid != _iconGrid || failed != _iconFailed || iconPixels != _iconPixels)
         {
-            _tray.Update(BatteryIcon.Create(soc, grid, failed, iconPixels), Tooltip(update));
+            _tray.Update(
+                BatteryIcon.Create(soc, grid, failed, iconPixels, _settings.Current.LowSocAlertPercent),
+                Tooltip(update));
             _iconPixels = iconPixels;
             _iconSoc = soc;
             _iconGrid = grid;
@@ -124,6 +132,9 @@ public sealed partial class App : Application
             var message = _alerts.Next(update.Inverter, _settings.Current);
             if (message is not null)
                 _tray.ShowNotification("Power monitor", message);
+
+            if (_outages?.Observe(update.Inverter.GridConnected, update.Inverter.ReadAt) == true)
+                OutageLogStore.Save(_outages.Events);
         }
     }
 
@@ -143,6 +154,21 @@ public sealed partial class App : Application
         _settingsWindow.Saved += SaveSettings;
         _settingsWindow.Closed += (_, _) => _settingsWindow = null;
         _settingsWindow.Activate();
+    }
+
+    private void ShowHistory()
+    {
+        if (_historyWindow is not null)
+        {
+            _historyWindow.Activate();
+            return;
+        }
+
+        _historyWindow = new HistoryWindow(
+            _outages?.Events ?? [],
+            () => _status?.HistorySnapshot() ?? []);
+        _historyWindow.Closed += (_, _) => _historyWindow = null;
+        _historyWindow.Activate();
     }
 
     private void SaveSettings(AppSettings edited)
@@ -188,6 +214,9 @@ public sealed partial class App : Application
         _tray = null;
         _settingsWindow?.Close();
         _settingsWindow = null;
+        _historyWindow?.Close();
+        _historyWindow = null;
+        _status?.PersistHistory();
         _status?.Close();
         _status = null;
         _pc?.Dispose();
@@ -228,8 +257,8 @@ public sealed partial class App : Application
             {
                 var gridLost = settings.NotifyOnGridLoss && _grid && !snapshot.GridConnected;
                 var low = settings.NotifyOnLowSoc &&
-                          _soc > AppSettings.LowSocPercent &&
-                          snapshot.SocPercent <= AppSettings.LowSocPercent;
+                          _soc > settings.LowSocAlertPercent &&
+                          snapshot.SocPercent <= settings.LowSocAlertPercent;
                 message = (gridLost, low) switch
                 {
                     (true, true) => $"The grid dropped. Battery is down to {snapshot.SocPercent}%.",

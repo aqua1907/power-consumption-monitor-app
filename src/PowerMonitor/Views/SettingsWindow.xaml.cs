@@ -44,6 +44,7 @@ internal sealed partial class SettingsWindow : Window
         OffsetBox.Value = settings.RegisterAddressOffset == 1 ? 1 : 0;
         InvertToggle.IsChecked = settings.InvertPowerSign;
         ReserveBox.Value = Math.Clamp(settings.ReserveSocPercent, 0, 90);
+        LowSocThresholdBox.Value = Math.Clamp(settings.LowSocAlertPercent, 1, 90);
         PacksBox.Value = Math.Clamp(settings.PackCount, 1, 64);
         BaselineBox.Value = Math.Clamp(settings.PcBaselineWatts, 0, 2000);
         IntervalBox.Value = Math.Clamp(
@@ -79,6 +80,7 @@ internal sealed partial class SettingsWindow : Window
             InvertPowerSign = InvertToggle.IsChecked == true,
             RegisterAddressOffset = Number(OffsetBox),
             ReserveSocPercent = Number(ReserveBox),
+            LowSocAlertPercent = Number(LowSocThresholdBox),
             PackCount = Number(PacksBox),
             PcBaselineWatts = Number(BaselineBox),
             PollIntervalSeconds = Math.Clamp(

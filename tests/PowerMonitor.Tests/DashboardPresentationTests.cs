@@ -59,16 +59,17 @@ public sealed class DashboardPresentationTests
         Assert.Equal($"{2.5:0.00} kW", DashboardPresentation.FormatPower(-2500));
 
     [Fact]
-    public void History_is_bounded_and_keeps_newest_samples()
+    public void History_drops_samples_older_than_the_retention_window()
     {
-        var history = new PowerHistory(capacity: 3);
+        var history = new PowerHistory(TimeSpan.FromMinutes(1));
         var start = DateTimeOffset.UtcNow;
 
+        // 20 s apart: 0s, 20s, 40s, 60s, 80s - the 1-minute window should drop the earliest ones.
         for (var index = 0; index < 5; index++)
-            history.Add(new PowerSample(start.AddSeconds(index * 10), index, index * 2));
+            history.Add(new PowerSample(start.AddSeconds(index * 20), index, index * 2));
 
-        Assert.Equal(3, history.Samples.Count);
-        Assert.Equal(2, history.Samples[0].BatteryWatts);
+        Assert.True(history.Samples.Count < 5);
+        Assert.DoesNotContain(history.Samples, sample => sample.BatteryWatts == 0);
         Assert.Equal(4, history.Samples[^1].BatteryWatts);
     }
 
@@ -81,5 +82,21 @@ public sealed class DashboardPresentationTests
 
         Assert.Throws<ArgumentException>(() =>
             history.Add(new PowerSample(now.AddSeconds(-1), 200, 400)));
+    }
+
+    [Fact]
+    public void Window_returns_only_samples_within_the_requested_range()
+    {
+        var history = new PowerHistory();
+        var now = DateTimeOffset.UtcNow;
+
+        for (var index = 0; index < 6; index++)
+            history.Add(new PowerSample(now.AddMinutes(-50 + index * 10), index, index * 2));
+
+        var windowed = history.Window(now, TimeSpan.FromMinutes(30));
+
+        Assert.All(windowed, sample => Assert.True(sample.At >= now - TimeSpan.FromMinutes(30)));
+        Assert.Equal(5, windowed[^1].BatteryWatts);
+        Assert.DoesNotContain(windowed, sample => sample.BatteryWatts is 0 or 1);
     }
 }
