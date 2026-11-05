@@ -21,7 +21,14 @@ public class SettingsStoreTests
             PcBaselineWatts = 55,
             PollIntervalSeconds = 15,
             StartWithWindows = true,
-            NotifyOnGridLoss = false
+            NotifyOnGridLoss = false,
+            BackupPlayModeEnabled = true,
+            WowForeverConfigPath = @"D:\Games\Battle.net\World of Warcraft\_forever_\WTF\Config.wtf",
+            BackupDisplayHz = 60,
+            GridDisplayHz = 240,
+            BackupGpuPowerEnabled = true,
+            BackupGpuPowerWatts = 175,
+            GridGpuPowerWatts = 450
         };
 
         SettingsStore.Save(settings, path);

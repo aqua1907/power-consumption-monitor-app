@@ -1,6 +1,7 @@
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using PowerMonitor.BackupMode;
 using PowerMonitor.Core.Deye;
 using PowerMonitor.Core.Presentation;
 using PowerMonitor.Core.Settings;
@@ -26,6 +27,7 @@ public sealed partial class App : Application
     private MonitorLoop? _loop;
     private TrayIconService? _tray;
     private readonly AlertState _alerts = new();
+    private readonly BackupPlayController _backupPlay = new();
     private OutageLog? _outages;
     private int? _iconSoc;
     private int _iconPixels;
@@ -43,6 +45,15 @@ public sealed partial class App : Application
     {
         try
         {
+            if (Environment.GetCommandLineArgs().Contains(
+                    "--install-gpu-power-helper",
+                    StringComparer.OrdinalIgnoreCase))
+            {
+                GpuPowerLimit.InstallHelperElevated();
+                Exit();
+                return;
+            }
+
             _instance = SingleInstance.TryAcquire();
             if (_instance is null)
             {
@@ -135,6 +146,10 @@ public sealed partial class App : Application
 
             if (_outages?.Observe(update.Inverter.GridConnected, update.Inverter.ReadAt) == true)
                 OutageLogStore.Save(_outages.Events);
+
+            var backupMessage = _backupPlay.Observe(update.Inverter.GridConnected, _settings.Current);
+            if (backupMessage is not null)
+                _tray.ShowNotification("Backup play mode", backupMessage);
         }
     }
 
@@ -150,7 +165,7 @@ public sealed partial class App : Application
             return;
         }
 
-        _settingsWindow = new SettingsWindow(_settings.Current);
+        _settingsWindow = new SettingsWindow(_settings.Current, _backupPlay);
         _settingsWindow.Saved += SaveSettings;
         _settingsWindow.Closed += (_, _) => _settingsWindow = null;
         _settingsWindow.Activate();

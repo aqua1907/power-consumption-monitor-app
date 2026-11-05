@@ -22,4 +22,19 @@ public sealed record AppSettings
     public bool StartWithWindows { get; init; }
     public bool NotifyOnGridLoss { get; init; } = true;
     public bool NotifyOnLowSoc { get; init; } = true;
+
+    /// <summary>
+    /// When the Deye inverter loses grid, drop display refresh / GPU power and switch every
+    /// <see cref="Games.GameProfiles"/> entry to its low-power preset.
+    /// </summary>
+    public bool BackupPlayModeEnabled { get; init; }
+
+    public string WowForeverConfigPath { get; init; } =
+        @"D:\Games\Battle.net\World of Warcraft\_forever_\WTF\Config.wtf";
+
+    public int BackupDisplayHz { get; init; } = 60;
+    public int GridDisplayHz { get; init; } = 240;
+    public bool BackupGpuPowerEnabled { get; init; } = true;
+    public int BackupGpuPowerWatts { get; init; } = 175;
+    public int GridGpuPowerWatts { get; init; } = 450;
 }

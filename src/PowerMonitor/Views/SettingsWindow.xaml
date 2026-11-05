@@ -162,6 +162,72 @@
                     </StackPanel>
                 </Border>
 
+                <TextBlock
+                    Margin="0,12,0,0"
+                    Style="{StaticResource BodyStrongTextBlockStyle}"
+                    Text="Backup play mode" />
+                <Border Padding="16" Style="{StaticResource CardStyle}">
+                    <StackPanel Spacing="12">
+                        <CheckBox
+                            x:Name="BackupPlayToggle"
+                            Content="When the grid drops, switch WoW: Forever to low power" />
+                        <TextBox
+                            x:Name="WowConfigPathBox"
+                            Header="WoW Forever Config.wtf"
+                            PlaceholderText="D:\Games\Battle.net\World of Warcraft\_forever_\WTF\Config.wtf" />
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <NumberBox
+                                x:Name="BackupHzBox"
+                                Header="Backup display Hz"
+                                Maximum="240"
+                                Minimum="60"
+                                SpinButtonPlacementMode="Compact" />
+                            <NumberBox
+                                x:Name="GridHzBox"
+                                Grid.Column="1"
+                                Header="Grid display Hz"
+                                Maximum="360"
+                                Minimum="60"
+                                SpinButtonPlacementMode="Compact" />
+                        </Grid>
+                        <CheckBox
+                            x:Name="GpuPowerToggle"
+                            Content="Also change the RTX 4090 power limit" />
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <NumberBox
+                                x:Name="BackupGpuWattsBox"
+                                Header="Backup GPU W"
+                                Maximum="600"
+                                Minimum="150"
+                                SpinButtonPlacementMode="Compact" />
+                            <NumberBox
+                                x:Name="GridGpuWattsBox"
+                                Grid.Column="1"
+                                Header="Grid GPU W"
+                                Maximum="600"
+                                Minimum="150"
+                                SpinButtonPlacementMode="Compact" />
+                        </Grid>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Click="InstallGpuHelper_Click" Content="Install GPU power helper" />
+                            <Button Click="ApplyBackupNow_Click" Content="Apply backup now" />
+                            <Button Click="ApplyGridNow_Click" Content="Apply grid now" />
+                        </StackPanel>
+                        <TextBlock
+                            Style="{StaticResource SecondaryCaptionStyle}"
+                            Text="Display Hz and GPU watts change immediately and apply to every game. WoW: Forever is the only game preset; another title is one IGamePowerProfile added to GameProfiles. WoW graphics load from Config.wtf on restart — restart the game once after an outage starts or ends. The GPU helper needs one admin approval, then outages no longer prompt UAC."
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+
                 <InfoBar
                     x:Name="ResultBar"
                     Margin="0,8,0,0"

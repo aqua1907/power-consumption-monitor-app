@@ -2,6 +2,7 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using PowerMonitor.BackupMode;
 using PowerMonitor.Core.Deye;
 using PowerMonitor.Core.Estimate;
 using PowerMonitor.Core.Settings;
@@ -11,19 +12,21 @@ namespace PowerMonitor.Views;
 internal sealed partial class SettingsWindow : Window
 {
     private readonly AppWindow _appWindow;
+    private readonly BackupPlayController _backupPlay;
     private bool _loading;
     private FinderWindow? _finder;
 
     public event Action<AppSettings>? Saved;
 
-    public SettingsWindow(AppSettings settings)
+    public SettingsWindow(AppSettings settings, BackupPlayController backupPlay)
     {
         InitializeComponent();
         SystemBackdrop = new MicaBackdrop();
         ExtendsContentIntoTitleBar = true;
 
+        _backupPlay = backupPlay;
         _appWindow = WindowSizing.AppWindowOf(this);
-        WindowSizing.Fit(this, 520, 680);
+        WindowSizing.Fit(this, 520, 780);
         if (_appWindow.Presenter is OverlappedPresenter presenter)
         {
             presenter.IsResizable = true;
@@ -54,6 +57,13 @@ internal sealed partial class SettingsWindow : Window
         StartupToggle.IsChecked = settings.StartWithWindows;
         GridNotificationToggle.IsChecked = settings.NotifyOnGridLoss;
         SocNotificationToggle.IsChecked = settings.NotifyOnLowSoc;
+        BackupPlayToggle.IsChecked = settings.BackupPlayModeEnabled;
+        WowConfigPathBox.Text = settings.WowForeverConfigPath;
+        BackupHzBox.Value = Math.Clamp(settings.BackupDisplayHz, 60, 240);
+        GridHzBox.Value = Math.Clamp(settings.GridDisplayHz, 60, 360);
+        GpuPowerToggle.IsChecked = settings.BackupGpuPowerEnabled;
+        BackupGpuWattsBox.Value = Math.Clamp(settings.BackupGpuPowerWatts, 150, 600);
+        GridGpuWattsBox.Value = Math.Clamp(settings.GridGpuPowerWatts, 150, 600);
         SerialBox.IsEnabled = settings.Protocol == LoggerProtocol.SolarmanV5;
         _loading = false;
     }
@@ -89,12 +99,68 @@ internal sealed partial class SettingsWindow : Window
                 AppSettings.MaxPollIntervalSeconds),
             StartWithWindows = StartupToggle.IsChecked == true,
             NotifyOnGridLoss = GridNotificationToggle.IsChecked == true,
-            NotifyOnLowSoc = SocNotificationToggle.IsChecked == true
+            NotifyOnLowSoc = SocNotificationToggle.IsChecked == true,
+            BackupPlayModeEnabled = BackupPlayToggle.IsChecked == true,
+            WowForeverConfigPath = WowConfigPathBox.Text.Trim(),
+            BackupDisplayHz = Number(BackupHzBox),
+            GridDisplayHz = Number(GridHzBox),
+            BackupGpuPowerEnabled = GpuPowerToggle.IsChecked == true,
+            BackupGpuPowerWatts = Number(BackupGpuWattsBox),
+            GridGpuPowerWatts = Number(GridGpuWattsBox)
         };
+
+        if (settings.BackupPlayModeEnabled &&
+            (string.IsNullOrWhiteSpace(settings.WowForeverConfigPath) ||
+             !File.Exists(settings.WowForeverConfigPath)))
+        {
+            throw new InvalidOperationException(
+                "Backup play mode needs a valid WoW Forever Config.wtf path.");
+        }
 
         if (!string.IsNullOrWhiteSpace(settings.LoggerHost))
             DeyeClient.Validate(settings);
         return settings;
+    }
+
+    private void InstallGpuHelper_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            GpuPowerLimit.StartElevatedInstaller();
+            ShowResult(
+                InfoBarSeverity.Informational,
+                "Approve the Windows prompt to install the GPU power helper. After that, outages can change the 4090 power limit without UAC.");
+        }
+        catch (Exception ex)
+        {
+            ShowResult(InfoBarSeverity.Error, ex.Message);
+        }
+    }
+
+    private void ApplyBackupNow_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var message = _backupPlay.ApplyBackup(ReadSettings());
+            ShowResult(InfoBarSeverity.Success, message);
+        }
+        catch (Exception ex)
+        {
+            ShowResult(InfoBarSeverity.Error, ex.Message);
+        }
+    }
+
+    private void ApplyGridNow_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var message = _backupPlay.ApplyGrid(ReadSettings());
+            ShowResult(InfoBarSeverity.Success, message);
+        }
+        catch (Exception ex)
+        {
+            ShowResult(InfoBarSeverity.Error, ex.Message);
+        }
     }
 
     private static int Number(NumberBox box)
