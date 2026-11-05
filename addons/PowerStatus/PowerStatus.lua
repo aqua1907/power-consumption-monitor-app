@@ -46,6 +46,21 @@ local updatedText = frame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall
 updatedText:SetPoint("BOTTOMLEFT", 12, 6)
 updatedText:SetJustifyH("LEFT")
 
+local icon
+
+local function PaintIcon(feed)
+    if not icon then
+        return
+    end
+    if not feed or not feed.hasData then
+        icon:SetVertexColor(0.65, 0.65, 0.65)
+    elseif feed.grid then
+        icon:SetVertexColor(0.3, 0.85, 0.35)
+    else
+        icon:SetVertexColor(1, 0.55, 0.12)
+    end
+end
+
 local function Place()
     frame:ClearAllPoints()
     local db = PowerStatusDB
@@ -69,6 +84,7 @@ local function Refresh()
         flowText:SetText("")
         loadText:SetText(feed.error or "")
         updatedText:SetText(feed.updated or "")
+        PaintIcon(feed)
         return
     end
 
@@ -96,6 +112,7 @@ local function Refresh()
     flowText:SetTextColor(0.85, 0.85, 0.85)
     loadText:SetText(string.format("Home %s   PC %s", feed.load or "—", feed.pc or "—"))
     updatedText:SetText(feed.updated or "")
+    PaintIcon(feed)
 end
 
 frame:SetScript("OnDragStart", frame.StartMoving)
@@ -120,15 +137,28 @@ SLASH_POWERSTATUS2 = "/powerstatus"
 SlashCmdList.POWERSTATUS = Toggle
 
 local button = CreateFrame("Button", "PowerStatusMinimapButton", Minimap)
-button:SetSize(32, 32)
+button:SetSize(31, 31)
 button:SetFrameStrata("MEDIUM")
 button:SetFrameLevel(8)
 button:RegisterForClicks("LeftButtonUp")
 button:RegisterForDrag("LeftButton")
+button:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
 
-local icon = button:CreateTexture(nil, "ARTWORK")
-icon:SetAllPoints()
+local background = button:CreateTexture(nil, "BACKGROUND")
+background:SetSize(20, 20)
+background:SetTexture("Interface\\Minimap\\UI-Minimap-Background")
+background:SetPoint("TOPLEFT", 7, -5)
+
+icon = button:CreateTexture(nil, "ARTWORK")
+icon:SetSize(17, 17)
+icon:SetPoint("TOPLEFT", 7, -6)
 icon:SetTexture("Interface\\AddOns\\PowerStatus\\icon")
+PaintIcon(PowerStatus_Feed)
+
+local border = button:CreateTexture(nil, "OVERLAY")
+border:SetSize(53, 53)
+border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
+border:SetPoint("TOPLEFT")
 
 local function Snap()
     local angle = (PowerStatusDB and PowerStatusDB.angle) or 210
