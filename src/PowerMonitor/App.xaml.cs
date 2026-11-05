@@ -12,6 +12,7 @@ using PowerMonitor.Startup;
 using PowerMonitor.Tray;
 using PowerMonitor.Ui;
 using PowerMonitor.Views;
+using PowerMonitor.Wow;
 
 namespace PowerMonitor;
 
@@ -170,7 +171,18 @@ public sealed partial class App : Application
             var state = DashboardPresentation.Create(update.Inverter, update.Backup, update.Error);
             var low = update.Inverter is not null &&
                       update.Inverter.SocPercent <= _settings.Current.LowSocAlertPercent;
-            WowStatusFeed.Write(path, state, (int)Math.Round(update.Pc.EstimatedWatts), low);
+            var pc = (int)Math.Round(update.Pc.EstimatedWatts);
+            WowStatusFeed.Write(path, state, pc, low);
+            WowAddonChannel.Push(WowStatusBits.Pack(
+                state.HasData,
+                state.SocPercent,
+                low,
+                state.GridConnected,
+                state.LoadPowerWatts,
+                state.Flow,
+                update.Inverter?.BatteryPowerWatts ?? 0,
+                pc,
+                update.Backup));
         }
         catch
         {

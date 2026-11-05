@@ -35,4 +35,35 @@ public class WowStatusFeedTests
             @"D:\Games\Battle.net\World of Warcraft\_forever_\Interface\AddOns\PowerStatus\status.lua",
             path);
     }
+
+    [Fact]
+    public void Packet_round_trips_the_fields_the_addon_reads()
+    {
+        var snapshot = new InverterSnapshot(75, 52, 436, 0, 407, false, DateTimeOffset.Parse("2026-11-05T12:49:26Z"));
+        var backup = RuntimeEstimator.Estimate(snapshot, new AppSettings());
+        var bits = WowStatusBits.Pack(true, 75, false, false, 407, BatteryFlow.Discharging, 436, 129, backup);
+
+        Assert.Equal(WowStatusBits.Length, bits.Length);
+        var cursor = 0;
+        int Take(int width)
+        {
+            var value = 0;
+            for (var i = 0; i < width; i++)
+                value = (value << 1) | bits[cursor++];
+            return value;
+        }
+
+        var sum = bits.Take(65).Sum(bit => bit);
+        Assert.Equal(1, Take(1));
+        Assert.Equal(0, Take(1));
+        Assert.Equal(0, Take(1));
+        Assert.Equal(75, Take(7));
+        Assert.Equal(407, Take(14));
+        Assert.Equal(2, Take(2));
+        Assert.Equal(436, Take(14));
+        Assert.Equal(129, Take(12));
+        Assert.Equal(0, Take(1));
+        Assert.True(Take(12) > 0);
+        Assert.Equal(sum % 64, Take(6));
+    }
 }

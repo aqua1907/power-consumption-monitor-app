@@ -191,11 +191,127 @@ button:SetScript("OnLeave", function()
     GameTooltip:Hide()
 end)
 
+-- Live updates arrive as Ctrl+Shift chords: F8 = 0, F7 = 1, F6 = end of a 71-bit packet.
+-- Layout matches WowStatusBits: hasData, low, grid, soc:7, load:14, flow:2, flowAbs:14, pc:12, backupIdle, backupMin:12, checksum:6.
+local bits = {}
+local lastBitAt = 0
+
+local function Take(width)
+    local value = 0
+    for _ = 1, width do
+        value = value * 2 + (table.remove(bits, 1) or 0)
+    end
+    return value
+end
+
+local function Watts(value)
+    if value >= 1000 then
+        return string.format("%.2f kW", value / 1000)
+    end
+    return string.format("%d W", value)
+end
+
+local function ApplyPacket()
+    if #bits ~= 71 then
+        wipe(bits)
+        return
+    end
+    local sum = 0
+    for i = 1, 65 do
+        sum = sum + bits[i]
+    end
+    local hasData = Take(1) == 1
+    local low = Take(1) == 1
+    local grid = Take(1) == 1
+    local soc = Take(7)
+    local load = Take(14)
+    local flow = Take(2)
+    local flowAbs = Take(14)
+    local pc = Take(12)
+    local backupIdle = Take(1) == 1
+    local backupMin = Take(12)
+    local checksum = Take(6)
+    wipe(bits)
+    if checksum ~= sum % 64 then
+        return
+    end
+
+    local flowText = "Idle"
+    if flow == 1 then
+        flowText = "Charging · " .. Watts(flowAbs)
+    elseif flow == 2 then
+        flowText = "Discharging · " .. Watts(flowAbs)
+    end
+
+    local backup = "—"
+    if backupIdle then
+        backup = "Idle"
+    elseif backupMin < 4095 then
+        local hours = math.floor(backupMin / 60)
+        local minutes = backupMin % 60
+        backup = hours <= 0 and (minutes .. " m") or string.format("%d h %02d m", hours, minutes)
+    end
+
+    PowerStatus_Feed = {
+        hasData = hasData,
+        soc = soc,
+        low = low,
+        grid = grid,
+        summary = hasData and (grid and "Grid on" or "Grid off · on battery") or "No connection",
+        flow = hasData and flowText or "",
+        backup = hasData and backup or "—",
+        load = hasData and Watts(load) or "—",
+        pc = hasData and Watts(pc) or "—",
+        updated = date("%H:%M:%S"),
+        error = "",
+    }
+    Refresh()
+    if GameTooltip:GetOwner() == button then
+        button:GetScript("OnEnter")(button)
+    end
+end
+
+local function BindChords()
+    if InCombatLockdown and InCombatLockdown() then
+        return
+    end
+    pcall(SetOverrideBindingClick, button, true, "CTRL-SHIFT-F8", "PowerStatusBit0")
+    pcall(SetOverrideBindingClick, button, true, "CTRL-SHIFT-F7", "PowerStatusBit1")
+    pcall(SetOverrideBindingClick, button, true, "CTRL-SHIFT-F6", "PowerStatusBitEnd")
+end
+
+local function BitButton(name, bit)
+    local click = CreateFrame("Button", name, UIParent)
+    click:SetScript("OnClick", function()
+        if bit == nil then
+            ApplyPacket()
+            return
+        end
+        bits[#bits + 1] = bit
+        lastBitAt = GetTime()
+    end)
+end
+
+BitButton("PowerStatusBit0", 0)
+BitButton("PowerStatusBit1", 1)
+BitButton("PowerStatusBitEnd", nil)
+
 local events = CreateFrame("Frame")
 events:RegisterEvent("PLAYER_LOGIN")
-events:SetScript("OnEvent", function()
+events:RegisterEvent("PLAYER_REGEN_ENABLED")
+events:SetScript("OnUpdate", function()
+    if #bits > 0 and GetTime() - lastBitAt > 2 then
+        wipe(bits)
+    end
+end)
+events:SetScript("OnEvent", function(_, event)
+    if event == "PLAYER_REGEN_ENABLED" then
+        BindChords()
+        return
+    end
     Place()
     Snap()
+    BindChords()
     if PowerStatusDB and PowerStatusDB.hidden then
         frame:Hide()
     end
