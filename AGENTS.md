@@ -13,3 +13,16 @@
 - PC power is read with LibreHardwareMonitor: PawnIO for AMD package power and NVIDIA libraries for GPU power. Battery and flow animations stop while the dashboard is hidden.
 - The repo is on Git branch `main`, published as a public GitHub repo (pushed with the `gh` CLI). `README.md` covers purpose and how to run, with a live flyout screenshot at `docs/flyout.png`. `.gitignore` excludes `bin/`, `obj/`, `.vs/`, `*.user`, `TestResults/`, and `.cursor/`. User settings live outside the repo at `%AppData%\PowerMonitor\settings.json`; keep real logger serials out of commits.
 - The LAN is treated as untrusted. UDP discovery keeps only replies whose advertised IP matches the sender, capped at 256. `RegisterDecoder` rejects SOC over 100, battery over 70 V, power over 20 kW, and grid flags other than 0/1. `SocJumpGuard` holds back SOC jumps larger than 5% plus 3% per minute until a second reading confirms. Any failed read turns the tray icon into a red "!" with a "Stale since HH:mm" tooltip.
+
+## Working Notes
+
+- Shell is PowerShell on Windows. Use `Get-ChildItem`, `Select-String`, and `Stop-Process`; `grep`, `find`, and `cat` are not available. Globbing all of `C:\Users\Ivan` times out, so scope searches to the repo or use `Get-ChildItem -Recurse -Depth`.
+- Unit tests: `dotnet test tests\PowerMonitor.Tests\PowerMonitor.Tests.csproj --nologo --filter "FullyQualifiedName~<Name>"`. Tests are xUnit `[Fact]` and write temp files under `Path.GetTempPath()\power-monitor-tests\<guid>`.
+- App build: `dotnet build src\PowerMonitor\PowerMonitor.csproj --nologo`. Stop the running `PowerMonitor` process first, or the build fails with MSB3027 on `PowerMonitor.Core.dll`. Restart with `dotnet run --project src\PowerMonitor\PowerMonitor.csproj --no-build`.
+- `nvidia-smi -pl` needs admin. The app uses the scheduled task `PowerMonitorGpuPowerLimit` for it.
+- Stage by path (`git add -- <paths>`). `AGENTS.md` and `.idea/` can hold unrelated edits. Before committing, scan the staged diff for logger serials, tokens, and WoW account IDs.
+- Game root is `D:\Games\Battle.net\World of Warcraft`. Forever runs as process `Wow` from `_forever_`; Midnight is `_retail_`. Both share one account folder, so keep `WTF` contents out of commits.
+- The WoW client rewrites `Config.wtf` and cache files on exit and logout. Edit them only while `Wow` is closed, or re-apply after it exits.
+- The Power Status addon source is `addons\PowerStatus`. Copy it to `_forever_\Interface\AddOns\PowerStatus` after edits. The addon reads `status.lua` only on login or `/reload`. WoW loads only TGA textures, so PNG icons render blank; TGA needs bottom-left origin and 8 alpha bits. The TOC `Interface: 16001` is unverified against the client build.
+- `WowAddonChannel` sends readings to Forever as Ctrl+Shift+F6/F7/F8 key packets and is not yet tested in-game. `WowStatusBits` (C#) and the decoder in `PowerStatus.lua` must match bit for bit; change both together.
+- New `AppSettings` properties need defaults and a line in the `SettingsStoreTests` round-trip.
