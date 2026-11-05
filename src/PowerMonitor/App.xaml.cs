@@ -5,6 +5,7 @@ using PowerMonitor.BackupMode;
 using PowerMonitor.Core.Deye;
 using PowerMonitor.Core.Presentation;
 using PowerMonitor.Core.Settings;
+using PowerMonitor.Core.Wow;
 using PowerMonitor.Monitoring;
 using PowerMonitor.Pc;
 using PowerMonitor.Startup;
@@ -150,6 +151,30 @@ public sealed partial class App : Application
             var backupMessage = _backupPlay.Observe(update.Inverter.GridConnected, _settings.Current);
             if (backupMessage is not null)
                 _tray.ShowNotification("Backup play mode", backupMessage);
+        }
+
+        WriteAddonStatus(update);
+    }
+
+    private void WriteAddonStatus(MonitorUpdate update)
+    {
+        if (_settings is null)
+            return;
+
+        try
+        {
+            var path = WowStatusFeed.PathFor(_settings.Current.WowForeverConfigPath);
+            if (path is null)
+                return;
+
+            var state = DashboardPresentation.Create(update.Inverter, update.Backup, update.Error);
+            var low = update.Inverter is not null &&
+                      update.Inverter.SocPercent <= _settings.Current.LowSocAlertPercent;
+            WowStatusFeed.Write(path, state, (int)Math.Round(update.Pc.EstimatedWatts), low);
+        }
+        catch
+        {
+            // The tray keeps working if the game folder cannot be written.
         }
     }
 

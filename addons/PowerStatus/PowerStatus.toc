@@ -1,0 +1,8 @@
+## Interface: 16001
+## Title: Power Status
+## Notes: House battery, grid, and backup time from PowerMonitor
+## SavedVariables: PowerStatusDB
+## Version: 1.0
+
+status.lua
+PowerStatus.lua
