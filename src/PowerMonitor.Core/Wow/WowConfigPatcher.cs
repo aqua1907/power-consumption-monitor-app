@@ -115,29 +115,50 @@ public static class WowConfigPatcher
     /// <summary>
     /// Saves the current Config.wtf as the grid snapshot unless it already looks like the backup preset.
     /// </summary>
-    public static void SnapshotIfQuality(string configPath, string snapshotPath)
+    public static void SnapshotIfQuality(string configPath, string snapshotPath, string? backupSnapshotPath = null)
     {
         if (!File.Exists(configPath))
             throw new FileNotFoundException("WoW Config.wtf was not found.", configPath);
 
-        if (LooksLikeBackup(configPath) && File.Exists(snapshotPath))
+        if (LooksLikeBackup(configPath, backupSnapshotPath) && File.Exists(snapshotPath))
             return;
 
         Snapshot(configPath, snapshotPath);
     }
 
-    public static bool LooksLikeBackup(string configPath)
+    /// <summary>Copy the live Config.wtf as the on-battery graphics profile.</summary>
+    public static void SaveBackupProfile(string configPath, string backupSnapshotPath)
+    {
+        Snapshot(configPath, backupSnapshotPath);
+    }
+
+    public static bool LooksLikeBackup(string configPath, string? backupSnapshotPath = null)
+    {
+        var quality = ReadCvar(configPath, "graphicsQuality");
+        if (quality is null)
+            return false;
+
+        if (backupSnapshotPath is not null && File.Exists(backupSnapshotPath))
+        {
+            var backupQuality = ReadCvar(backupSnapshotPath, "graphicsQuality");
+            return backupQuality is not null &&
+                   quality.Equals(backupQuality, StringComparison.Ordinal);
+        }
+
+        return quality == BackupCvars["graphicsQuality"];
+    }
+
+    public static string? ReadCvar(string configPath, string key)
     {
         foreach (var line in File.ReadLines(configPath))
         {
-            if (!TryParse(line, out var key, out var value))
+            if (!TryParse(line, out var parsedKey, out var value))
                 continue;
-            if (!key.Equals("graphicsQuality", StringComparison.OrdinalIgnoreCase))
-                continue;
-            return value == "1";
+            if (parsedKey.Equals(key, StringComparison.OrdinalIgnoreCase))
+                return value;
         }
 
-        return false;
+        return null;
     }
 
     public static void RestoreSnapshot(string configPath, string snapshotPath)

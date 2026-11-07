@@ -64,7 +64,9 @@ public class WowConfigPatcherTests
         Directory.CreateDirectory(directory);
         var config = Path.Combine(directory, "Config.wtf");
         File.WriteAllText(config, "SET graphicsQuality \"6\"\n");
-        var game = new WowForeverProfile(Path.Combine(directory, "snapshot.wtf"));
+        var game = new WowForeverProfile(
+            Path.Combine(directory, "snapshot.wtf"),
+            Path.Combine(directory, "missing-backup.wtf"));
         var settings = new AppSettings { WowForeverConfigPath = config };
 
         Assert.Contains("low-power", game.Apply(onBackup: true, settings));
@@ -72,5 +74,21 @@ public class WowConfigPatcherTests
 
         Assert.Contains("quality", game.Apply(onBackup: false, settings));
         Assert.Contains("SET graphicsQuality \"6\"", File.ReadAllText(config));
+    }
+
+    [Fact]
+    public void WowForever_uses_saved_backup_profile_when_present()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "power-monitor-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        var config = Path.Combine(directory, "Config.wtf");
+        var backup = Path.Combine(directory, "backup.wtf");
+        File.WriteAllText(config, "SET graphicsQuality \"6\"\nSET maxFPS \"200\"\n");
+        File.WriteAllText(backup, "SET graphicsQuality \"3\"\nSET maxFPS \"60\"\n");
+        var game = new WowForeverProfile(Path.Combine(directory, "snapshot.wtf"), backup);
+        var settings = new AppSettings { WowForeverConfigPath = config };
+
+        Assert.Contains("low-power", game.Apply(onBackup: true, settings));
+        Assert.Equal("SET graphicsQuality \"3\"\nSET maxFPS \"60\"\n", File.ReadAllText(config));
     }
 }

@@ -8,17 +8,19 @@ public sealed class WowForeverProfile : IGamePowerProfile
 {
     private bool _running;
 
-    public WowForeverProfile(string? snapshotPath = null)
+    public WowForeverProfile(string? snapshotPath = null, string? backupSnapshotPath = null)
     {
-        SnapshotPath = snapshotPath ?? Path.Combine(
+        var root = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "PowerMonitor",
-            "wow-forever-grid.wtf");
+            "PowerMonitor");
+        SnapshotPath = snapshotPath ?? Path.Combine(root, "wow-forever-grid.wtf");
+        BackupSnapshotPath = backupSnapshotPath ?? Path.Combine(root, "wow-forever-backup.wtf");
     }
 
     public string Id => "wow-forever";
     public string Name => "WoW: Forever";
     public string SnapshotPath { get; }
+    public string BackupSnapshotPath { get; }
 
     public string? Apply(bool onBackup, AppSettings settings)
     {
@@ -28,8 +30,8 @@ public sealed class WowForeverProfile : IGamePowerProfile
 
         if (onBackup)
         {
-            WowConfigPatcher.SnapshotIfQuality(path, SnapshotPath);
-            WowConfigPatcher.ApplyCvars(path, WowConfigPatcher.BackupCvars);
+            WowConfigPatcher.SnapshotIfQuality(path, SnapshotPath, BackupSnapshotPath);
+            ApplyBackup(path);
             return "WoW low-power graphics written (restart WoW to apply).";
         }
 
@@ -57,12 +59,20 @@ public sealed class WowForeverProfile : IGamePowerProfile
                 return null;
 
             // WoW rewrites Config.wtf from memory on exit.
-            WowConfigPatcher.ApplyCvars(settings.WowForeverConfigPath, WowConfigPatcher.BackupCvars);
+            ApplyBackup(settings.WowForeverConfigPath);
             return "WoW exited on battery — low-power graphics kept for the next launch.";
         }
 
         _running = running;
         return null;
+    }
+
+    private void ApplyBackup(string configPath)
+    {
+        if (File.Exists(BackupSnapshotPath))
+            WowConfigPatcher.RestoreSnapshot(configPath, BackupSnapshotPath);
+        else
+            WowConfigPatcher.ApplyCvars(configPath, WowConfigPatcher.BackupCvars);
     }
 
     private static bool WowRunning()
