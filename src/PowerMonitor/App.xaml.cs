@@ -31,6 +31,8 @@ public sealed partial class App : Application
     private readonly AlertState _alerts = new();
     private readonly BackupPlayController _backupPlay = new();
     private OutageLog? _outages;
+    private InverterEnergy? _lastEnergy;
+    private DateTimeOffset? _lastEnergyAt;
     private int? _iconSoc;
     private int _iconPixels;
     private bool? _iconGrid;
@@ -71,7 +73,7 @@ public sealed partial class App : Application
             _status.SettingsRequested += (_, _) => ShowSettings();
             _status.HistoryRequested += (_, _) => ShowHistory();
             _status.NativeAppWindow.Closing += StatusClosing;
-            _outages = new OutageLog(OutageLogStore.Load());
+            _outages = OutageLogStore.Load();
 
             try
             {
@@ -147,14 +149,35 @@ public sealed partial class App : Application
             if (message is not null)
                 _tray.ShowNotification("Power monitor", message);
 
-            if (_outages?.Observe(update.Inverter.GridConnected, update.Inverter.ReadAt) == true)
-                OutageLogStore.Save(_outages.Events);
+            if (_outages is { } outages)
+            {
+                var poll = TimeSpan.FromSeconds(Math.Clamp(
+                    _settings.Current.PollIntervalSeconds,
+                    AppSettings.MinPollIntervalSeconds,
+                    AppSettings.MaxPollIntervalSeconds));
+                var changed = outages.Observe(update.Inverter.GridConnected, update.Inverter.ReadAt, poll);
+                OutageLogStore.Save(outages);
+                if (changed)
+                    _historyWindow?.ShowOutages(outages.Events);
+            }
 
             var backupMessage = _backupPlay.Observe(update.Inverter.GridConnected, _settings.Current);
             if (backupMessage is not null)
                 _tray.ShowNotification("Backup play mode", backupMessage);
         }
 
+        if (update.Inverter is { } inverter)
+        {
+            _lastEnergy = inverter.Energy;
+            _lastEnergyAt = inverter.ReadAt;
+        }
+        else
+        {
+            _lastEnergy = null;
+            _lastEnergyAt = null;
+        }
+
+        _historyWindow?.ShowEnergy(_lastEnergy, _lastEnergyAt);
         WriteAddonStatus(update);
     }
 
@@ -217,9 +240,8 @@ public sealed partial class App : Application
             return;
         }
 
-        _historyWindow = new HistoryWindow(
-            _outages?.Events ?? [],
-            () => _status?.HistorySnapshot() ?? []);
+        _historyWindow = new HistoryWindow(_outages?.Events ?? []);
+        _historyWindow.ShowEnergy(_lastEnergy, _lastEnergyAt);
         _historyWindow.Closed += (_, _) => _historyWindow = null;
         _historyWindow.Activate();
     }

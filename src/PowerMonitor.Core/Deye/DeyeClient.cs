@@ -19,12 +19,37 @@ public static class DeyeClient
                 ? new SolarmanV5RegisterReader(settings.LoggerHost.Trim(), settings.LoggerPort, settings.LoggerSerial)
                 : new ModbusTcpRegisterReader(settings.LoggerHost.Trim(), settings.LoggerPort);
 
-            var words = await reader.ReadHoldingRegistersAsync((byte)settings.UnitId, start, DeyeRegisters.BlockCount, cancellationToken);
-            return RegisterDecoder.Decode(words, settings.InvertPowerSign, DateTimeOffset.Now);
+            var unitId = (byte)settings.UnitId;
+            var words = await reader.ReadHoldingRegistersAsync(unitId, start, DeyeRegisters.BlockCount, cancellationToken);
+            var snapshot = RegisterDecoder.Decode(words, settings.InvertPowerSign, DateTimeOffset.Now);
+            return snapshot with { Energy = await ReadEnergyAsync(reader, settings, unitId, cancellationToken) };
         }
         finally
         {
             Gate.Release();
+        }
+    }
+
+    private static async Task<InverterEnergy?> ReadEnergyAsync(
+        IRegisterReader reader,
+        AppSettings settings,
+        byte unitId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var start = checked((ushort)(DeyeRegisters.EnergyBlockStart + settings.RegisterAddressOffset));
+            var words = await reader.ReadHoldingRegistersAsync(
+                unitId, start, DeyeRegisters.EnergyBlockCount, cancellationToken);
+            return RegisterDecoder.TryDecodeEnergy(words);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            return null;
         }
     }
 

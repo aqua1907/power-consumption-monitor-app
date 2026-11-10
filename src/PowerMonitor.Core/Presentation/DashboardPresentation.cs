@@ -19,8 +19,10 @@ public sealed record DashboardState(
     string UsableEnergy,
     string Updated,
     string? Error,
-    string Voltage = "—",
-    string Current = "—",
+    string BatteryVoltage = "—",
+    string BatteryCurrent = "—",
+    string GridVoltage = "",
+    string GridCurrent = "",
     string ChargeTime = "",
     string ChargeHint = "")
 {
@@ -68,6 +70,8 @@ public static class DashboardPresentation
             error,
             FormatVoltage(snapshot.BatteryVoltageVolts),
             FormatCurrent(snapshot.BatteryCurrentAmps),
+            snapshot.GridConnected ? FormatVoltage(snapshot.GridVoltageVolts) : "",
+            snapshot.GridConnected ? FormatCurrent(snapshot.GridCurrentAmps) : "",
             charge?.DurationText ?? "",
             charge?.Hint ?? "");
     }

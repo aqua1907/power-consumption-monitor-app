@@ -70,10 +70,29 @@ public sealed class HistoryPersistenceTests
             new OutageEvent(now.AddMinutes(-5), null),
         };
 
-        OutageLogStore.Save(events, path);
+        var log = new OutageLog(events, now, lastGridConnected: false);
+        OutageLogStore.Save(log, path);
         var loaded = OutageLogStore.Load(path);
 
-        Assert.Equal(events, loaded);
+        Assert.Equal(events, loaded.Events);
+        Assert.Equal(now, loaded.LastSeenAt);
+        Assert.False(loaded.LastGridConnected);
+    }
+
+    [Fact]
+    public void OutageLogStore_still_reads_an_older_event_array()
+    {
+        var path = TempPath("outages.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        var start = DateTimeOffset.Parse("2026-11-01T10:00:00Z");
+        File.WriteAllText(path, $$"""[{"Start":"{{start:O}}","End":null}]""");
+
+        var loaded = OutageLogStore.Load(path);
+
+        var outage = Assert.Single(loaded.Events);
+        Assert.Equal(start, outage.Start);
+        Assert.True(outage.IsOngoing);
+        Assert.False(loaded.LastGridConnected);
     }
 
     private static string TempPath(string fileName) =>

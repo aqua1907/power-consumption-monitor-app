@@ -23,10 +23,110 @@
                 <TextBlock
                     Margin="0,8,0,0"
                     Style="{StaticResource BodyStrongTextBlockStyle}"
+                    Text="Inverter and battery" />
+                <TextBlock
+                    Style="{StaticResource SecondaryCaptionStyle}"
+                    Text="Stored on the inverter, so it includes the time this PC was off. Today's figures reset at the inverter's midnight."
+                    TextWrapping="Wrap" />
+                <Border Style="{StaticResource CardStyle}">
+                    <Grid>
+                        <TextBlock
+                            x:Name="EnergyEmptyText"
+                            Margin="16"
+                            Style="{StaticResource SecondaryCaptionStyle}"
+                            Text="Waiting for the inverter."
+                            TextWrapping="Wrap" />
+                        <Grid
+                            x:Name="EnergyGrid"
+                            Margin="16"
+                            ColumnSpacing="16"
+                            RowSpacing="8"
+                            Visibility="Collapsed">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Column="1" Style="{StaticResource TertiaryCaptionStyle}" Text="Today" />
+                            <TextBlock
+                                Grid.Column="2"
+                                HorizontalAlignment="Right"
+                                Style="{StaticResource TertiaryCaptionStyle}"
+                                Text="Total" />
+                            <TextBlock Grid.Row="1" Style="{StaticResource BodyTextBlockStyle}" Text="Battery charged" />
+                            <TextBlock
+                                x:Name="ChargeTodayText"
+                                Grid.Row="1"
+                                Grid.Column="1"
+                                Style="{StaticResource BodyStrongTextBlockStyle}" />
+                            <TextBlock
+                                x:Name="ChargeTotalText"
+                                Grid.Row="1"
+                                Grid.Column="2"
+                                HorizontalAlignment="Right"
+                                Style="{StaticResource BodyStrongTextBlockStyle}" />
+                            <TextBlock Grid.Row="2" Style="{StaticResource BodyTextBlockStyle}" Text="Battery discharged" />
+                            <TextBlock
+                                x:Name="DischargeTodayText"
+                                Grid.Row="2"
+                                Grid.Column="1"
+                                Style="{StaticResource BodyStrongTextBlockStyle}" />
+                            <TextBlock
+                                x:Name="DischargeTotalText"
+                                Grid.Row="2"
+                                Grid.Column="2"
+                                HorizontalAlignment="Right"
+                                Style="{StaticResource BodyStrongTextBlockStyle}" />
+                            <TextBlock Grid.Row="3" Style="{StaticResource BodyTextBlockStyle}" Text="Home" />
+                            <TextBlock
+                                x:Name="LoadTodayText"
+                                Grid.Row="3"
+                                Grid.Column="1"
+                                Style="{StaticResource BodyStrongTextBlockStyle}" />
+                            <TextBlock
+                                x:Name="LoadTotalText"
+                                Grid.Row="3"
+                                Grid.Column="2"
+                                HorizontalAlignment="Right"
+                                Style="{StaticResource BodyStrongTextBlockStyle}" />
+                            <TextBlock Grid.Row="4" Style="{StaticResource BodyTextBlockStyle}" Text="Grid bought" />
+                            <TextBlock
+                                x:Name="GridBoughtText"
+                                Grid.Row="4"
+                                Grid.Column="1"
+                                Style="{StaticResource BodyStrongTextBlockStyle}" />
+                            <TextBlock Grid.Row="5" Style="{StaticResource BodyTextBlockStyle}" Text="Grid sold" />
+                            <TextBlock
+                                x:Name="GridSoldText"
+                                Grid.Row="5"
+                                Grid.Column="1"
+                                Style="{StaticResource BodyStrongTextBlockStyle}" />
+                            <TextBlock
+                                x:Name="EnergyReadText"
+                                Grid.Row="5"
+                                Grid.Column="2"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Bottom"
+                                Style="{StaticResource TertiaryCaptionStyle}" />
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <TextBlock
+                    Margin="0,8,0,0"
+                    Style="{StaticResource BodyStrongTextBlockStyle}"
                     Text="Outages" />
                 <TextBlock
                     Style="{StaticResource SecondaryCaptionStyle}"
-                    Text="Grid-loss events this app has observed, with when they started, ended, and how long they lasted."
+                    Text="When the grid dropped and came back. An exact time is one this app saw. Before means it changed while this PC was off: the inverter does not store that minute, so the time is the first moment this PC noticed. An outage that started and ended entirely while this PC was off is not listed."
                     TextWrapping="Wrap" />
                 <Border Padding="0" Style="{StaticResource CardStyle}">
                     <Grid>
@@ -89,12 +189,12 @@
                     <StackPanel Spacing="8">
                         <TextBlock
                             Style="{StaticResource SecondaryCaptionStyle}"
-                            Text="Save the retained battery and load history (up to the last 24 hours) as a CSV file for offline analysis."
+                            Text="Save the inverter's battery, home, and grid counters as a CSV file."
                             TextWrapping="Wrap" />
                         <Button
                             x:Name="ExportButton"
                             Click="Export_Click"
-                            Content="Save power history as CSV…" />
+                            Content="Save inverter history as CSV…" />
                         <TextBlock
                             x:Name="ExportResultText"
                             Style="{StaticResource SecondaryCaptionStyle}"

@@ -10,7 +10,7 @@ public class ProtocolFrameTests
     {
         var frame = ModbusTcp.BuildReadHoldingRequest(1, 1, DeyeRegisters.BlockStart, DeyeRegisters.BlockCount);
 
-        Assert.Equal("000100000006010300A9001A", Convert.ToHexString(frame));
+        Assert.Equal("00010000000601030096002D", Convert.ToHexString(frame));
     }
 
     [Fact]

@@ -15,7 +15,10 @@ public sealed record InverterSnapshot(
     int LoadPowerWatts,
     bool GridConnected,
     DateTimeOffset ReadAt,
-    double BatteryCurrentAmps = 0)
+    double BatteryCurrentAmps = 0,
+    double GridVoltageVolts = 0,
+    double GridCurrentAmps = 0,
+    InverterEnergy? Energy = null)
 {
     public BatteryFlow BatteryFlow => BatteryPowerWatts switch
     {

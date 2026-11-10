@@ -9,7 +9,7 @@ public class RegisterDecoderTests
     {
         var snapshot = RegisterDecoder.Decode(Sample(), invertPowerSign: false, new DateTimeOffset(2026, 10, 21, 12, 0, 0, TimeSpan.Zero));
 
-        Assert.Equal(26, DeyeRegisters.BlockCount);
+        Assert.Equal(45, DeyeRegisters.BlockCount);
         Assert.Equal(72, snapshot.SocPercent);
         Assert.Equal(51.20, snapshot.BatteryVoltageVolts, 3);
         Assert.Equal(-400, snapshot.BatteryPowerWatts);
@@ -42,6 +42,34 @@ public class RegisterDecoderTests
 
         Assert.Equal(-7.81, normal.BatteryCurrentAmps, 3);
         Assert.Equal(7.81, inverted.BatteryCurrentAmps, 3);
+    }
+
+    [Fact]
+    public void Decodes_grid_voltage_and_current()
+    {
+        var words = Sample();
+        words[DeyeRegisters.Index(DeyeRegisters.GridVoltage)] = 2304;
+        words[DeyeRegisters.Index(DeyeRegisters.GridCurrent)] = unchecked((ushort)(short)-320);
+
+        var normal = RegisterDecoder.Decode(words, invertPowerSign: false, DateTimeOffset.UnixEpoch);
+        var inverted = RegisterDecoder.Decode(words, invertPowerSign: true, DateTimeOffset.UnixEpoch);
+
+        Assert.Equal(230.4, normal.GridVoltageVolts, 3);
+        Assert.Equal(-3.20, normal.GridCurrentAmps, 3);
+        Assert.Equal(230.4, inverted.GridVoltageVolts, 3);
+        Assert.Equal(3.20, inverted.GridCurrentAmps, 3);
+    }
+
+    [Theory]
+    [InlineData(DeyeRegisters.GridVoltage, 3001)]
+    [InlineData(DeyeRegisters.GridCurrent, 10_001)]
+    public void Rejects_a_grid_reading_this_inverter_cannot_report(ushort address, ushort value)
+    {
+        var words = Sample();
+        words[DeyeRegisters.Index(address)] = value;
+
+        Assert.Throws<InvalidOperationException>(() =>
+            RegisterDecoder.Decode(words, invertPowerSign: false, DateTimeOffset.UnixEpoch));
     }
 
     [Fact]

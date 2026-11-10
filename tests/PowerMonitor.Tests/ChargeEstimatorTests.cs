@@ -51,10 +51,30 @@ public sealed class ChargeEstimatorTests
 
         var state = DashboardPresentation.Create(snapshot, null, null, charge);
 
-        Assert.Equal("51.2 V", state.Voltage);
-        Assert.Equal($"{19.5:0.0} A", state.Current);
+        Assert.Equal("51.2 V", state.BatteryVoltage);
+        Assert.Equal($"{19.5:0.0} A", state.BatteryCurrent);
         Assert.Equal("~2 h 33 m", state.ChargeTime);
         Assert.Contains("Charging slows", state.ChargeHint);
+    }
+
+    [Fact]
+    public void Dashboard_blanks_grid_voltage_and_current_when_the_grid_is_off()
+    {
+        var onGrid = Snapshot(soc: 50, batteryWatts: 400) with
+        {
+            GridVoltageVolts = 230.4,
+            GridCurrentAmps = 1.8
+        };
+        var offGrid = onGrid with { GridConnected = false };
+
+        var connected = DashboardPresentation.Create(onGrid, null, null);
+        var disconnected = DashboardPresentation.Create(offGrid, null, null);
+
+        Assert.Equal("230.4 V", connected.GridVoltage);
+        Assert.Equal($"{1.8:0.0} A", connected.GridCurrent);
+        Assert.Equal("", disconnected.GridVoltage);
+        Assert.Equal("", disconnected.GridCurrent);
+        Assert.Equal("51.2 V", disconnected.BatteryVoltage);
     }
 
     [Fact]

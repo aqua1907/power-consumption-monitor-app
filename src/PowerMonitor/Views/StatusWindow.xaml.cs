@@ -93,8 +93,10 @@ internal sealed partial class StatusWindow : Window
         RuntimeLabel.Text = charging ? "Full in" : "Backup time";
         RuntimeText.Text = charging ? state.ChargeTime : state.Runtime;
         ToolTipService.SetToolTip(RuntimePanel, charging ? state.ChargeHint : state.RuntimeHint);
-        VoltageText.Text = state.HasData ? state.Voltage : "—";
-        CurrentText.Text = state.HasData ? state.Current : "—";
+        GridVoltageText.Text = state.GridVoltage;
+        GridCurrentText.Text = state.GridCurrent;
+        BatteryVoltageText.Text = state.BatteryVoltage;
+        BatteryCurrentText.Text = state.BatteryCurrent;
         FlowText.Text = state.FlowSummary;
         EnergyText.Text = state.UsableEnergy;
 
