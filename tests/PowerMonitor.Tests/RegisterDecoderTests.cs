@@ -32,6 +32,29 @@ public class RegisterDecoderTests
     }
 
     [Fact]
+    public void Decodes_battery_current_with_the_power_sign()
+    {
+        var words = Sample();
+        words[DeyeRegisters.Index(DeyeRegisters.BatteryCurrent)] = unchecked((ushort)(short)-781);
+
+        var normal = RegisterDecoder.Decode(words, invertPowerSign: false, DateTimeOffset.UnixEpoch);
+        var inverted = RegisterDecoder.Decode(words, invertPowerSign: true, DateTimeOffset.UnixEpoch);
+
+        Assert.Equal(-7.81, normal.BatteryCurrentAmps, 3);
+        Assert.Equal(7.81, inverted.BatteryCurrentAmps, 3);
+    }
+
+    [Fact]
+    public void Rejects_a_battery_current_this_inverter_cannot_report()
+    {
+        var words = Sample();
+        words[DeyeRegisters.Index(DeyeRegisters.BatteryCurrent)] = 20_001;
+
+        Assert.Throws<InvalidOperationException>(() =>
+            RegisterDecoder.Decode(words, invertPowerSign: false, DateTimeOffset.UnixEpoch));
+    }
+
+    [Fact]
     public void Grid_flag_zero_means_the_grid_is_off()
     {
         var words = Sample();

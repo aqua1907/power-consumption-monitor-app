@@ -18,7 +18,11 @@ public sealed record DashboardState(
     string RuntimeHint,
     string UsableEnergy,
     string Updated,
-    string? Error)
+    string? Error,
+    string Voltage = "—",
+    string Current = "—",
+    string ChargeTime = "",
+    string ChargeHint = "")
 {
     public static DashboardState Waiting(string? error = null) => new(
         false, 0, BatteryFlow.Idle, false, 0, 0, 0, 0,
@@ -32,7 +36,8 @@ public static class DashboardPresentation
     public static DashboardState Create(
         InverterSnapshot? snapshot,
         BackupEstimate? backup,
-        string? error)
+        string? error,
+        ChargeEstimate? charge = null)
     {
         if (snapshot is null)
             return DashboardState.Waiting(error);
@@ -60,8 +65,16 @@ public static class DashboardPresentation
             backup?.Hint ?? "Runtime estimate is not available yet",
             backup is null ? "" : $"{backup.RemainingWh / 1000m:0.0} kWh usable",
             snapshot.ReadAt.LocalDateTime.ToString("HH:mm:ss"),
-            error);
+            error,
+            FormatVoltage(snapshot.BatteryVoltageVolts),
+            FormatCurrent(snapshot.BatteryCurrentAmps),
+            charge?.DurationText ?? "",
+            charge?.Hint ?? "");
     }
+
+    public static string FormatVoltage(double volts) => $"{volts:0.0} V";
+
+    public static string FormatCurrent(double amps) => $"{Math.Abs(amps):0.0} A";
 
     public static string FormatPower(double watts)
     {

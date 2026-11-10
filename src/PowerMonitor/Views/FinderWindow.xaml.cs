@@ -28,7 +28,8 @@ internal sealed partial class FinderWindow : Window
             _scan.Dispose();
         };
 
-        WindowSizing.Fit(this, 540, 420);
+        WindowSizing.Fit(this, "finder", 540, 420);
+        _ = new WindowSizeTracker(this, "finder");
     }
 
     private async Task ScanAsync()

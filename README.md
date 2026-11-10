@@ -4,7 +4,7 @@ Power Monitor is a Windows notification-area app for a Deye hybrid inverter on t
 
 ![The flyout, with the battery at 99 percent, the grid on, and the last 30 minutes of battery power](docs/flyout.png)
 
-The flyout is compact and stays out of Alt+Tab. Left-click the tray icon to show or hide it. Press Esc or click outside to hide it, unless it is pinned. Right-click the icon for Settings or Exit. Starting the app again focuses the copy that is already running. Settings and Find logger open as their own windows.
+The flyout is compact and stays out of Alt+Tab. Left-click the tray icon to show or hide it. Press Esc or click outside to hide it, unless it is pinned. The flyout shows battery voltage and current, and while the battery charges it shows an estimated time to full (charging slows near 100%, so the real time is usually longer). The History button in the flyout header, or right-click the icon, opens the outage list and CSV export; right-click also has Settings and Exit. Every window remembers the size you give it in `%AppData%\PowerMonitor\window-layout.json`. Starting the app again focuses the copy that is already running. Settings and Find logger open as their own windows.
 
 ## Requirements
 

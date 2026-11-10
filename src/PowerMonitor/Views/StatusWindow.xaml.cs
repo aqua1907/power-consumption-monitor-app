@@ -20,7 +20,9 @@ internal sealed partial class StatusWindow : Window
     private static readonly TimeSpan ReopenGuard = TimeSpan.FromMilliseconds(400);
     private static readonly TimeSpan HistorySaveThrottle = TimeSpan.FromSeconds(20);
     private readonly PowerHistory _history = new();
+    private const string WindowKey = "status";
     private readonly AppWindow _appWindow;
+    private readonly WindowSizeTracker _sizeTracker;
     private DateTimeOffset? _lastHistorySample;
     private DateTimeOffset _lastHistorySave = DateTimeOffset.MinValue;
     private DateTime _hiddenAt = DateTime.MinValue;
@@ -28,6 +30,7 @@ internal sealed partial class StatusWindow : Window
     private bool _correctingSize;
 
     public event EventHandler? SettingsRequested;
+    public event EventHandler? HistoryRequested;
 
     public StatusWindow()
     {
@@ -37,6 +40,7 @@ internal sealed partial class StatusWindow : Window
         SetTitleBar(DragArea);
 
         _appWindow = WindowSizing.AppWindowOf(this);
+        _sizeTracker = new WindowSizeTracker(this, WindowKey, MinimumWidth, MinimumHeight);
         _appWindow.IsShownInSwitchers = false;
         if (_appWindow.Presenter is OverlappedPresenter presenter)
         {
@@ -81,12 +85,16 @@ internal sealed partial class StatusWindow : Window
 
     public void Apply(MonitorUpdate update, AppSettings settings)
     {
-        var state = DashboardPresentation.Create(update.Inverter, update.Backup, update.Error);
+        var state = DashboardPresentation.Create(update.Inverter, update.Backup, update.Error, update.Charge);
         SummaryText.Text = state.Summary;
         StatusDot.Fill = Theme(StatusKey(state, settings.LowSocAlertPercent));
         SocText.Text = state.HasData ? $"{state.SocPercent}%" : "--%";
-        RuntimeText.Text = state.Runtime;
-        ToolTipService.SetToolTip(RuntimePanel, state.RuntimeHint);
+        var charging = state.ChargeTime.Length > 0;
+        RuntimeLabel.Text = charging ? "Full in" : "Backup time";
+        RuntimeText.Text = charging ? state.ChargeTime : state.Runtime;
+        ToolTipService.SetToolTip(RuntimePanel, charging ? state.ChargeHint : state.RuntimeHint);
+        VoltageText.Text = state.HasData ? state.Voltage : "—";
+        CurrentText.Text = state.HasData ? state.Current : "—";
         FlowText.Text = state.FlowSummary;
         EnergyText.Text = state.UsableEnergy;
 
@@ -187,7 +195,9 @@ internal sealed partial class StatusWindow : Window
     private void PlaceNearTray()
     {
         _correctingSize = true;
-        WindowSizing.PlaceFlyout(this, EdgeMargin);
+        _sizeTracker.Suppressed = true;
+        WindowSizing.PlaceFlyout(this, WindowKey, EdgeMargin);
+        _sizeTracker.Suppressed = false;
         _correctingSize = false;
     }
 
@@ -219,6 +229,9 @@ internal sealed partial class StatusWindow : Window
 
     private void Settings_Click(object sender, RoutedEventArgs e) =>
         SettingsRequested?.Invoke(this, EventArgs.Empty);
+
+    private void History_Click(object sender, RoutedEventArgs e) =>
+        HistoryRequested?.Invoke(this, EventArgs.Empty);
 
     private void AppWindow_Changed(AppWindow sender, AppWindowChangedEventArgs args)
     {

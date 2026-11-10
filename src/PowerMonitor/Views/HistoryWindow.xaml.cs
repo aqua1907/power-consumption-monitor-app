@@ -18,7 +18,8 @@ internal sealed partial class HistoryWindow : Window
         ExtendsContentIntoTitleBar = true;
         _historyProvider = historyProvider;
 
-        WindowSizing.Fit(this, 560, 520);
+        WindowSizing.Fit(this, "history", 560, 520);
+        _ = new WindowSizeTracker(this, "history");
         if (WindowSizing.AppWindowOf(this).Presenter is OverlappedPresenter presenter)
             presenter.IsResizable = true;
 

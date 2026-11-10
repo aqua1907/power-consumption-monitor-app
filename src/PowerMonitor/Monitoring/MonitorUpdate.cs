@@ -9,4 +9,5 @@ internal sealed record MonitorUpdate(
     BackupEstimate? Backup,
     PcPowerReading Pc,
     string? Error,
-    DateTimeOffset AttemptedAt);
+    DateTimeOffset AttemptedAt,
+    ChargeEstimate? Charge = null);

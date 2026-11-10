@@ -3,6 +3,7 @@ namespace PowerMonitor.Core.Deye;
 public static class RegisterDecoder
 {
     public const double MaxBatteryVolts = 70;
+    public const double MaxBatteryAmps = 200;
     public const int MaxPowerWatts = 20_000;
 
     public static InverterSnapshot Decode(ReadOnlySpan<ushort> words, bool invertPowerSign, DateTimeOffset readAt)
@@ -12,11 +13,13 @@ public static class RegisterDecoder
 
         var soc = words[DeyeRegisters.Index(DeyeRegisters.BatterySoc)];
         var volts = words[DeyeRegisters.Index(DeyeRegisters.BatteryVoltage)] * 0.01;
+        var amps = ToSigned(words[DeyeRegisters.Index(DeyeRegisters.BatteryCurrent)]) * 0.01;
         var gridFlag = words[DeyeRegisters.Index(DeyeRegisters.GridConnected)];
         var batteryPower = ToSigned(words[DeyeRegisters.Index(DeyeRegisters.BatteryPower)]);
         var gridPower = ToSigned(words[DeyeRegisters.Index(DeyeRegisters.GridPower)]);
         var loadPower = ToSigned(words[DeyeRegisters.Index(DeyeRegisters.LoadPower)]);
         if (soc > 100 || volts > MaxBatteryVolts || gridFlag > 1 ||
+            Math.Abs(amps) > MaxBatteryAmps ||
             Math.Abs(batteryPower) > MaxPowerWatts ||
             Math.Abs(gridPower) > MaxPowerWatts ||
             Math.Abs(loadPower) > MaxPowerWatts)
@@ -30,7 +33,8 @@ public static class RegisterDecoder
             sign * gridPower,
             sign * loadPower,
             gridFlag == 1,
-            readAt);
+            readAt,
+            sign * amps);
     }
 
     private static int ToSigned(ushort raw) => (short)raw;

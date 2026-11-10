@@ -94,11 +94,13 @@ internal sealed class MonitorLoop : IDisposable
             }
 
             BackupEstimate? backup = null;
+            ChargeEstimate? charge = null;
             if (last is not null)
             {
                 try
                 {
                     backup = RuntimeEstimator.Estimate(last, settings);
+                    charge = ChargeEstimator.Estimate(last, settings);
                 }
                 catch (Exception ex)
                 {
@@ -106,7 +108,7 @@ internal sealed class MonitorLoop : IDisposable
                 }
             }
 
-            _publish(new MonitorUpdate(last, backup, pc, error, DateTimeOffset.Now));
+            _publish(new MonitorUpdate(last, backup, pc, error, DateTimeOffset.Now, charge));
 
             if (!await WaitAsync(settings.PollIntervalSeconds, cancellationToken))
                 break;

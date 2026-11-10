@@ -10,6 +10,7 @@ public static class DeyeRegisters
     public const ushort BatteryVoltage = 0x00B7;
     public const ushort BatterySoc = 0x00B8;
     public const ushort BatteryPower = 0x00BE;
+    public const ushort BatteryCurrent = 0x00BF;
     public const ushort GridConnected = 0x00C2;
 
     public const ushort BlockStart = GridPower;

@@ -69,6 +69,7 @@ public sealed partial class App : Application
             _status = new StatusWindow();
             _status.LoadHistory(PowerHistoryStore.Load());
             _status.SettingsRequested += (_, _) => ShowSettings();
+            _status.HistoryRequested += (_, _) => ShowHistory();
             _status.NativeAppWindow.Closing += StatusClosing;
             _outages = new OutageLog(OutageLogStore.Load());
 

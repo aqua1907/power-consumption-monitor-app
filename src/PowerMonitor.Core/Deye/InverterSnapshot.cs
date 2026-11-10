@@ -14,7 +14,8 @@ public sealed record InverterSnapshot(
     int GridPowerWatts,
     int LoadPowerWatts,
     bool GridConnected,
-    DateTimeOffset ReadAt)
+    DateTimeOffset ReadAt,
+    double BatteryCurrentAmps = 0)
 {
     public BatteryFlow BatteryFlow => BatteryPowerWatts switch
     {

@@ -26,7 +26,8 @@ internal sealed partial class SettingsWindow : Window
 
         _backupPlay = backupPlay;
         _appWindow = WindowSizing.AppWindowOf(this);
-        WindowSizing.Fit(this, 520, 780);
+        WindowSizing.Fit(this, "settings", 520, 780);
+        _ = new WindowSizeTracker(this, "settings");
         if (_appWindow.Presenter is OverlappedPresenter presenter)
         {
             presenter.IsResizable = true;
