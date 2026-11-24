@@ -28,7 +28,13 @@ public class SettingsStoreTests
             GridDisplayHz = 240,
             BackupGpuPowerEnabled = true,
             BackupGpuPowerWatts = 175,
-            GridGpuPowerWatts = 450
+            GridGpuPowerWatts = 450,
+            ScheduleEnabled = true,
+            ScheduleOperator = "dtek-kem",
+            ScheduleAddressLabel = "вул. Хрещатик, 12",
+            ScheduleGroup = "20.1",
+            ScheduleLeadMinutes = 45,
+            NotifyOnScheduleChange = false
         };
 
         SettingsStore.Save(settings, path);

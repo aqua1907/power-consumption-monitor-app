@@ -1,13 +1,15 @@
-using Microsoft.UI.Dispatching;
+﻿using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using PowerMonitor.BackupMode;
 using PowerMonitor.Core.Deye;
 using PowerMonitor.Core.Presentation;
+using PowerMonitor.Core.Schedule;
 using PowerMonitor.Core.Settings;
 using PowerMonitor.Core.Wow;
 using PowerMonitor.Monitoring;
 using PowerMonitor.Pc;
+using PowerMonitor.Schedule;
 using PowerMonitor.Startup;
 using PowerMonitor.Tray;
 using PowerMonitor.Ui;
@@ -31,6 +33,8 @@ public sealed partial class App : Application
     private readonly AlertState _alerts = new();
     private readonly BackupPlayController _backupPlay = new();
     private OutageLog? _outages;
+    private ScheduleService? _schedule;
+    private string? _scheduleBrief;
     private InverterEnergy? _lastEnergy;
     private DateTimeOffset? _lastEnergyAt;
     private int? _iconSoc;
@@ -101,6 +105,14 @@ public sealed partial class App : Application
                 Timeout.Infinite,
                 executeOnlyOnce: false);
 
+            _schedule = new ScheduleService(
+                _dispatcher,
+                _settings,
+                ScheduleStore.Load(),
+                (title, message) => _tray?.ShowNotification(title, message),
+                OnScheduleChanged);
+            _schedule.Start();
+
             _loop = new MonitorLoop(_settings, _pc, Publish);
             _loop.Start();
         }
@@ -157,8 +169,12 @@ public sealed partial class App : Application
                     AppSettings.MaxPollIntervalSeconds));
                 var changed = outages.Observe(update.Inverter.GridConnected, update.Inverter.ReadAt, poll);
                 OutageLogStore.Save(outages);
+                _schedule?.ObserveGrid(update.Inverter.ReadAt, poll);
                 if (changed)
+                {
                     _historyWindow?.ShowOutages(outages.Events);
+                    ShowComparison();
+                }
             }
 
             var backupMessage = _backupPlay.Observe(update.Inverter.GridConnected, _settings.Current);
@@ -242,6 +258,7 @@ public sealed partial class App : Application
 
         _historyWindow = new HistoryWindow(_outages?.Events ?? []);
         _historyWindow.ShowEnergy(_lastEnergy, _lastEnergyAt);
+        ShowComparison();
         _historyWindow.Closed += (_, _) => _historyWindow = null;
         _historyWindow.Activate();
     }
@@ -264,6 +281,50 @@ public sealed partial class App : Application
         _settings.Update(edited);
         _alerts.Reset();
         _loop?.Kick();
+        _schedule?.Kick();
+    }
+
+    /// <summary>The schedule moved on: refresh the flyout line, the tooltip and the History comparison.</summary>
+    private void OnScheduleChanged()
+    {
+        if (_settings is null || _schedule is null)
+            return;
+
+        var settings = _settings.Current;
+        var now = DateTimeOffset.Now;
+        var days = _schedule.Archive.Days.Values.ToList();
+        string? line = null;
+        string? brief = null;
+        if (settings.ScheduleActive)
+        {
+            line = _schedule.Error is { } error && days.Count == 0
+                ? $"Outage schedule unavailable: {error}"
+                : ScheduleText.Line(days, now);
+            brief = ScheduleText.Brief(days, now);
+        }
+
+        _status?.ShowSchedule(line);
+        // The tray tooltip picks this up with the next inverter reading.
+        _scheduleBrief = brief;
+        ShowComparison();
+    }
+
+    private void ShowComparison()
+    {
+        if (_historyWindow is null)
+            return;
+
+        if (_settings is { Current.ScheduleActive: true } && _schedule is not null && _outages is not null)
+        {
+            _historyWindow.ShowComparison(
+                ScheduleComparer.Compare(_schedule.Archive, _outages.Events, DateTimeOffset.Now),
+                _schedule.Archive.Group,
+                _settings.Current.ScheduleAddressLabel);
+        }
+        else
+        {
+            _historyWindow.ShowComparison(null, "", "");
+        }
     }
 
     private void StatusClosing(AppWindow sender, AppWindowClosingEventArgs args)
@@ -285,6 +346,8 @@ public sealed partial class App : Application
         _showWait = null;
         _loop?.Dispose();
         _loop = null;
+        _schedule?.Dispose();
+        _schedule = null;
         _tray?.Dispose();
         _tray = null;
         _settingsWindow?.Close();
@@ -301,7 +364,13 @@ public sealed partial class App : Application
         Exit();
     }
 
-    private static string Tooltip(MonitorUpdate update)
+    private string Tooltip(MonitorUpdate update)
+    {
+        var text = ReadingTooltip(update);
+        return _scheduleBrief is null ? text : $"{text} | {_scheduleBrief}";
+    }
+
+    private static string ReadingTooltip(MonitorUpdate update)
     {
         if (update.Error is not null)
             return update.Inverter is null

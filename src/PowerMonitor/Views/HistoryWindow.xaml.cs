@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using PowerMonitor.Core.Deye;
 using PowerMonitor.Core.Presentation;
+using PowerMonitor.Core.Schedule;
 using Windows.Storage.Pickers;
 
 namespace PowerMonitor.Views;
@@ -33,6 +34,30 @@ internal sealed partial class HistoryWindow : Window
         OutagesList.ItemsSource = rows;
         OutagesList.Visibility = rows.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
         OutagesEmptyText.Visibility = rows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// <summary>Fills the schedule section, or hides it when <paramref name="comparison"/> is null (schedule off).</summary>
+    public void ShowComparison(ScheduleComparison? comparison, string group, string addressLabel)
+    {
+        ScheduleSection.Visibility = comparison is null ? Visibility.Collapsed : Visibility.Visible;
+        if (comparison is null)
+            return;
+
+        var where = string.IsNullOrWhiteSpace(addressLabel) ? "" : $"{addressLabel}, ";
+        ScheduleHeaderText.Text =
+            $"{where}group {group}. The operator publishes only today and tomorrow, so this compares the schedules " +
+            "this app saved with the outages it recorded. Not watched means this PC was off for part of the scheduled time.";
+        ScheduleSummaryText.Text = ComparisonText.Summary(comparison.Summary);
+        var rows = comparison.Rows
+            .Select(row => new ScheduleRow(
+                row.Day.ToString("ddd, MMM d", System.Globalization.CultureInfo.CurrentCulture),
+                ComparisonText.Scheduled(row),
+                ComparisonText.Actual(row),
+                ComparisonText.Result(row)))
+            .ToList();
+        ScheduleList.ItemsSource = rows;
+        ScheduleList.Visibility = rows.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+        ScheduleEmptyText.Visibility = rows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
     public void ShowEnergy(InverterEnergy? energy, DateTimeOffset? readAt)
@@ -109,4 +134,6 @@ internal sealed partial class HistoryWindow : Window
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
 
     private sealed record OutageRow(string Started, string Ended, string Duration);
+
+    private sealed record ScheduleRow(string Day, string Scheduled, string Actual, string Result);
 }

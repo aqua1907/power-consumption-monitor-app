@@ -153,6 +153,67 @@
                 <TextBlock
                     Margin="0,12,0,0"
                     Style="{StaticResource BodyStrongTextBlockStyle}"
+                    Text="Outage schedule" />
+                <Border Padding="16" Style="{StaticResource CardStyle}">
+                    <StackPanel Spacing="12">
+                        <CheckBox
+                            x:Name="ScheduleToggle"
+                            Content="Warn me before scheduled outages and compare them with real ones" />
+                        <ComboBox
+                            x:Name="ScheduleOperatorBox"
+                            HorizontalAlignment="Stretch"
+                            DisplayMemberPath="Name"
+                            Header="Operator" />
+                        <AutoSuggestBox
+                            x:Name="StreetBox"
+                            Header="Street"
+                            PlaceholderText="Type at least 3 letters, for example Хрещатик"
+                            SuggestionChosen="StreetBox_SuggestionChosen"
+                            TextChanged="StreetBox_TextChanged"
+                            TextMemberPath="Label">
+                            <AutoSuggestBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Label}" />
+                                </DataTemplate>
+                            </AutoSuggestBox.ItemTemplate>
+                        </AutoSuggestBox>
+                        <AutoSuggestBox
+                            x:Name="HouseBox"
+                            Header="House number"
+                            IsEnabled="False"
+                            PlaceholderText="Pick a street first, then type the number"
+                            SuggestionChosen="HouseBox_SuggestionChosen"
+                            TextChanged="HouseBox_TextChanged"
+                            TextMemberPath="Label">
+                            <AutoSuggestBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Label}" />
+                                </DataTemplate>
+                            </AutoSuggestBox.ItemTemplate>
+                        </AutoSuggestBox>
+                        <TextBlock
+                            x:Name="ScheduleGroupText"
+                            Style="{StaticResource BodyStrongTextBlockStyle}"
+                            TextWrapping="Wrap" />
+                        <NumberBox
+                            x:Name="ScheduleLeadBox"
+                            Header="Notify before an outage (minutes)"
+                            Maximum="720"
+                            Minimum="1"
+                            SpinButtonPlacementMode="Compact" />
+                        <CheckBox
+                            x:Name="ScheduleChangeToggle"
+                            Content="Notify when a new schedule is published or changed" />
+                        <TextBlock
+                            Style="{StaticResource SecondaryCaptionStyle}"
+                            Text="The street and house you type are sent to the operator's schedule service (app.yasno.ua) while you search. Only the address label and the group are saved, on this PC. The schedule itself is read every 15 minutes and kept for 30 days so it can be compared with the outages this app records."
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+
+                <TextBlock
+                    Margin="0,12,0,0"
+                    Style="{StaticResource BodyStrongTextBlockStyle}"
                     Text="Windows" />
                 <Border Padding="16,8" Style="{StaticResource CardStyle}">
                     <StackPanel>

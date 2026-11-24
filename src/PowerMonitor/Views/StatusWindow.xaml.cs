@@ -152,6 +152,13 @@ internal sealed partial class StatusWindow : Window
         ErrorBar.IsOpen = state.Error is not null;
     }
 
+    /// <summary>The next-outage line, or null to hide it when the schedule is off.</summary>
+    public void ShowSchedule(string? line)
+    {
+        ScheduleLine.Text = line ?? "";
+        ScheduleLine.Visibility = string.IsNullOrEmpty(line) ? Visibility.Collapsed : Visibility.Visible;
+    }
+
     public void ShowDashboard()
     {
         if (!_placed || PinButton.IsChecked != true)

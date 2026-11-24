@@ -23,6 +23,29 @@ public sealed record AppSettings
     public bool NotifyOnGridLoss { get; init; } = true;
     public bool NotifyOnLowSoc { get; init; } = true;
 
+    public const int MinScheduleLeadMinutes = 1;
+    public const int MaxScheduleLeadMinutes = 720;
+
+    /// <summary>Read the operator's stabilization outage schedule for <see cref="ScheduleGroup"/>.</summary>
+    public bool ScheduleEnabled { get; init; }
+
+    /// <summary>An id from <c>ScheduleOperator.All</c>.</summary>
+    public string ScheduleOperator { get; init; } = "dtek-kem";
+
+    /// <summary>The street and house the group was looked up for. Shown in Settings only; it is never sent anywhere.</summary>
+    public string ScheduleAddressLabel { get; init; } = "";
+
+    /// <summary>The operator's queue for that address, for example "19.1". Empty until an address is looked up.</summary>
+    public string ScheduleGroup { get; init; } = "";
+
+    /// <summary>How long before a scheduled outage to notify.</summary>
+    public int ScheduleLeadMinutes { get; init; } = 30;
+
+    public bool NotifyOnScheduleChange { get; init; } = true;
+
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool ScheduleActive => ScheduleEnabled && ScheduleGroup.Length > 0;
+
     /// <summary>
     /// When the Deye inverter loses grid, drop display refresh / GPU power and switch every
     /// <see cref="Games.GameProfiles"/> entry to its low-power preset.

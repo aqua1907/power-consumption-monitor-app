@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Media;
 using PowerMonitor.BackupMode;
 using PowerMonitor.Core.Deye;
 using PowerMonitor.Core.Estimate;
+using PowerMonitor.Core.Schedule;
 using PowerMonitor.Core.Settings;
 
 namespace PowerMonitor.Views;
@@ -15,6 +16,13 @@ internal sealed partial class SettingsWindow : Window
     private readonly BackupPlayController _backupPlay;
     private bool _loading;
     private FinderWindow? _finder;
+    private readonly ScheduleHttp _scheduleHttp = new([YasnoProvider.Host]);
+    private readonly CancellationTokenSource _closed = new();
+    private CancellationTokenSource? _streetSearch;
+    private CancellationTokenSource? _houseSearch;
+    private AddressChoice? _street;
+    private string _scheduleGroup = "";
+    private string _scheduleLabel = "";
 
     public event Action<AppSettings>? Saved;
 
@@ -34,7 +42,13 @@ internal sealed partial class SettingsWindow : Window
             presenter.IsMaximizable = true;
         }
 
+        ScheduleOperatorBox.ItemsSource = ScheduleOperator.All;
         LoadSettings(settings);
+        Closed += (_, _) =>
+        {
+            _closed.Cancel();
+            _scheduleHttp.Dispose();
+        };
     }
 
     private void LoadSettings(AppSettings settings)
@@ -58,6 +72,16 @@ internal sealed partial class SettingsWindow : Window
         StartupToggle.IsChecked = settings.StartWithWindows;
         GridNotificationToggle.IsChecked = settings.NotifyOnGridLoss;
         SocNotificationToggle.IsChecked = settings.NotifyOnLowSoc;
+        ScheduleToggle.IsChecked = settings.ScheduleEnabled;
+        ScheduleOperatorBox.SelectedItem = ScheduleOperator.Find(settings.ScheduleOperator) ?? ScheduleOperator.All[0];
+        ScheduleLeadBox.Value = Math.Clamp(
+            settings.ScheduleLeadMinutes,
+            AppSettings.MinScheduleLeadMinutes,
+            AppSettings.MaxScheduleLeadMinutes);
+        ScheduleChangeToggle.IsChecked = settings.NotifyOnScheduleChange;
+        _scheduleGroup = settings.ScheduleGroup;
+        _scheduleLabel = settings.ScheduleAddressLabel;
+        ShowScheduleGroup();
         BackupPlayToggle.IsChecked = settings.BackupPlayModeEnabled;
         WowConfigPathBox.Text = settings.WowForeverConfigPath;
         BackupHzBox.Value = Math.Clamp(settings.BackupDisplayHz, 60, 240);
@@ -101,6 +125,15 @@ internal sealed partial class SettingsWindow : Window
             StartWithWindows = StartupToggle.IsChecked == true,
             NotifyOnGridLoss = GridNotificationToggle.IsChecked == true,
             NotifyOnLowSoc = SocNotificationToggle.IsChecked == true,
+            ScheduleEnabled = ScheduleToggle.IsChecked == true,
+            ScheduleOperator = (ScheduleOperatorBox.SelectedItem as ScheduleOperator)?.Id ?? ScheduleOperator.DefaultId,
+            ScheduleAddressLabel = _scheduleLabel,
+            ScheduleGroup = _scheduleGroup,
+            ScheduleLeadMinutes = Math.Clamp(
+                Number(ScheduleLeadBox),
+                AppSettings.MinScheduleLeadMinutes,
+                AppSettings.MaxScheduleLeadMinutes),
+            NotifyOnScheduleChange = ScheduleChangeToggle.IsChecked == true,
             BackupPlayModeEnabled = BackupPlayToggle.IsChecked == true,
             WowForeverConfigPath = WowConfigPathBox.Text.Trim(),
             BackupDisplayHz = Number(BackupHzBox),
@@ -239,6 +272,12 @@ internal sealed partial class SettingsWindow : Window
         try
         {
             var settings = ReadSettings();
+            if (settings.ScheduleEnabled && settings.ScheduleGroup.Length == 0)
+            {
+                throw new InvalidOperationException(
+                    "Outage schedule needs an address: pick a street and a house number to find the group.");
+            }
+
             Saved?.Invoke(settings);
             Close();
         }
@@ -249,6 +288,132 @@ internal sealed partial class SettingsWindow : Window
     }
 
     private void Cancel_Click(object sender, RoutedEventArgs e) => Close();
+
+    private IAddressLookup Lookup =>
+        ((ScheduleOperatorBox.SelectedItem as ScheduleOperator) ?? ScheduleOperator.All[0]).CreateLookup(_scheduleHttp);
+
+    private void ShowScheduleGroup()
+    {
+        ScheduleGroupText.Text = _scheduleGroup.Length == 0
+            ? "No address chosen yet."
+            : string.IsNullOrWhiteSpace(_scheduleLabel)
+                ? $"Group {_scheduleGroup}"
+                : $"{_scheduleLabel} · group {_scheduleGroup}";
+    }
+
+    private async void StreetBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
+    {
+        if (args.Reason != AutoSuggestionBoxTextChangeReason.UserInput)
+            return;
+
+        _street = null;
+        HouseBox.IsEnabled = false;
+        HouseBox.Text = "";
+        HouseBox.ItemsSource = null;
+        await SearchAsync(
+            sender,
+            [],
+            AddressStepMinimum(0),
+            cts => _streetSearch = Replace(_streetSearch, cts));
+    }
+
+    private void StreetBox_SuggestionChosen(AutoSuggestBox sender, AutoSuggestBoxSuggestionChosenEventArgs args)
+    {
+        if (args.SelectedItem is not AddressChoice choice)
+            return;
+
+        _street = choice;
+        HouseBox.Text = "";
+        HouseBox.ItemsSource = null;
+        HouseBox.IsEnabled = true;
+        HouseBox.Focus(FocusState.Programmatic);
+    }
+
+    private async void HouseBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
+    {
+        if (args.Reason != AutoSuggestionBoxTextChangeReason.UserInput || _street is not { } street)
+            return;
+
+        await SearchAsync(
+            sender,
+            [street.Id],
+            AddressStepMinimum(1),
+            cts => _houseSearch = Replace(_houseSearch, cts));
+    }
+
+    private async void HouseBox_SuggestionChosen(AutoSuggestBox sender, AutoSuggestBoxSuggestionChosenEventArgs args)
+    {
+        if (args.SelectedItem is not AddressChoice house || _street is not { } street)
+            return;
+
+        ShowResult(InfoBarSeverity.Informational, "Looking up the outage group…");
+        try
+        {
+            var group = await Lookup.ResolveGroupAsync([street.Id, house.Id], _closed.Token);
+            if (group is null || !YasnoProvider.IsGroup(group))
+            {
+                ShowResult(InfoBarSeverity.Warning, "The operator does not list that address in any outage group.");
+                return;
+            }
+
+            _scheduleGroup = group;
+            _scheduleLabel = $"{street.Label}, {house.Label}";
+            ShowScheduleGroup();
+            ResultBar.IsOpen = false;
+        }
+        catch (OperationCanceledException) when (_closed.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            ShowResult(InfoBarSeverity.Error, ex.Message);
+        }
+    }
+
+    private int AddressStepMinimum(int step) =>
+        Lookup.Steps[step].IsHouse ? 1 : YasnoAddressLookup.MinQuery;
+
+    private static CancellationTokenSource Replace(CancellationTokenSource? previous, CancellationTokenSource next)
+    {
+        previous?.Cancel();
+        return next;
+    }
+
+    /// <summary>Debounced directory search that fills the box's suggestions. A newer keystroke supersedes it.</summary>
+    private async Task SearchAsync(
+        AutoSuggestBox box,
+        IReadOnlyList<string> path,
+        int minimum,
+        Action<CancellationTokenSource> register)
+    {
+        var query = box.Text;
+        var search = CancellationTokenSource.CreateLinkedTokenSource(_closed.Token);
+        register(search);
+        if (query.Trim().Length < minimum)
+        {
+            box.ItemsSource = null;
+            return;
+        }
+
+        try
+        {
+            await Task.Delay(350, search.Token);
+            var found = await Lookup.OptionsAsync(path, query, search.Token);
+            if (!search.IsCancellationRequested)
+            {
+                box.ItemsSource = found;
+                ResultBar.IsOpen = false;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            if (!search.IsCancellationRequested)
+                ShowResult(InfoBarSeverity.Error, ex.Message);
+        }
+    }
 
     private void ShowResult(InfoBarSeverity severity, string message)
     {

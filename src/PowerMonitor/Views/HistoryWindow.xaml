@@ -181,6 +181,74 @@
                     </Grid>
                 </Border>
 
+                <StackPanel
+                    x:Name="ScheduleSection"
+                    Spacing="8"
+                    Visibility="Collapsed">
+                    <TextBlock
+                        Margin="0,8,0,0"
+                        Style="{StaticResource BodyStrongTextBlockStyle}"
+                        Text="Schedule vs actual" />
+                    <TextBlock
+                        x:Name="ScheduleHeaderText"
+                        Style="{StaticResource SecondaryCaptionStyle}"
+                        TextWrapping="Wrap" />
+                    <TextBlock
+                        x:Name="ScheduleSummaryText"
+                        Style="{StaticResource BodyTextBlockStyle}"
+                        TextWrapping="Wrap" />
+                    <Border Padding="0" Style="{StaticResource CardStyle}">
+                        <Grid>
+                            <TextBlock
+                                x:Name="ScheduleEmptyText"
+                                Margin="16"
+                                Style="{StaticResource SecondaryCaptionStyle}"
+                                Text="No scheduled outages have passed yet."
+                                TextWrapping="Wrap" />
+                            <ListView
+                                x:Name="ScheduleList"
+                                MaxHeight="320"
+                                Padding="4"
+                                SelectionMode="None">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Padding="8,6" ColumnSpacing="8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="1.2*" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel>
+                                                <TextBlock
+                                                    Style="{StaticResource TertiaryCaptionStyle}"
+                                                    Text="{Binding Day}" />
+                                                <TextBlock
+                                                    Style="{StaticResource BodyTextBlockStyle}"
+                                                    Text="{Binding Scheduled}" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1">
+                                                <TextBlock
+                                                    Style="{StaticResource TertiaryCaptionStyle}"
+                                                    Text="Actual" />
+                                                <TextBlock
+                                                    Style="{StaticResource BodyTextBlockStyle}"
+                                                    Text="{Binding Actual}" />
+                                            </StackPanel>
+                                            <TextBlock
+                                                Grid.Column="2"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Center"
+                                                Style="{StaticResource BodyStrongTextBlockStyle}"
+                                                Text="{Binding Result}"
+                                                TextWrapping="Wrap" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+
                 <TextBlock
                     Margin="0,12,0,0"
                     Style="{StaticResource BodyStrongTextBlockStyle}"

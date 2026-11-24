@@ -38,6 +38,18 @@ If the state of charge looks wrong, change the register address offset in Settin
 
 Settings are stored in `%AppData%\PowerMonitor\settings.json` on this PC and are not part of the repository. If the app fails before the tray icon appears, the exception is written to `%LocalAppData%\PowerMonitor\startup-error.txt`.
 
+## Outage schedule
+
+For Kyiv (DTEK KEM), the app can read the stabilization outage schedule for your address. In Settings, under Outage schedule, turn it on, type your street and house number, and pick them from the suggestions. The app looks up your outage group and reads that group's schedule every 15 minutes.
+
+- A tray notification arrives a set number of minutes before each scheduled outage (30 by default) and again when it starts, with the time power is expected back. Another can announce a newly published or changed schedule.
+- The flyout shows one line with the current or next scheduled outage, and the tray tooltip adds it too.
+- History has a Schedule vs actual section. It lines up each scheduled outage with the real outage the battery log recorded, and marks it on time, shifted (with how many minutes), did not happen, or not watched when this PC was off. Real outages that no schedule covers are listed as not scheduled.
+
+The operator publishes only today and tomorrow, so the app keeps the schedules it saw for 30 days in `%AppData%\PowerMonitor\schedule.json`, together with the times it was watching the grid. The street and house you type are sent to YASNO (`app.yasno.ua`) while you search; only the address label and the group are saved, in `settings.json` on this PC. Changing the address starts a new history.
+
+The schedule source and address lookup are ported from [fastiuk/ukraine-energy-monitor](https://github.com/fastiuk/ukraine-energy-monitor) (MIT). Other operators can be added by implementing `IScheduleProvider` and `IAddressLookup` and listing them in `ScheduleOperator.All`.
+
 ## Tests
 
 ```powershell
