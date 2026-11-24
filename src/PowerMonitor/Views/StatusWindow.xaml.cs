@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using PowerMonitor.Core.Deye;
 using PowerMonitor.Core.Presentation;
+using PowerMonitor.Core.Schedule;
 using PowerMonitor.Core.Settings;
 using PowerMonitor.Monitoring;
 using Windows.Graphics;
@@ -28,9 +29,12 @@ internal sealed partial class StatusWindow : Window
     private DateTime _hiddenAt = DateTime.MinValue;
     private bool _placed;
     private bool _correctingSize;
+    private bool _scheduleAvailable;
+    private bool _animationsWanted;
 
     public event EventHandler? SettingsRequested;
     public event EventHandler? HistoryRequested;
+    public event EventHandler? ScheduleRefreshRequested;
 
     public StatusWindow()
     {
@@ -159,6 +163,43 @@ internal sealed partial class StatusWindow : Window
         ScheduleLine.Visibility = string.IsNullOrEmpty(line) ? Visibility.Collapsed : Visibility.Visible;
     }
 
+    /// <summary>
+    /// Fills the Schedule tab. The tab is enabled only while a schedule is selected; if it was open when
+    /// the schedule went away, the flyout falls back to Live.
+    /// </summary>
+    public void ShowScheduleTab(SchedulePresentation presentation)
+    {
+        _scheduleAvailable = presentation.Available;
+        ScheduleTab.IsEnabled = presentation.Available;
+        ToolTipService.SetToolTip(
+            ScheduleTab,
+            presentation.Available ? null : "Turn on Outage schedule in Settings and pick your address");
+        if (presentation.Available)
+            ScheduleBody.Apply(presentation);
+        else if (ReferenceEquals(TabBar.SelectedItem, ScheduleTab))
+            TabBar.SelectedItem = LiveTab;
+
+        UpdateTab();
+    }
+
+    private void UpdateTab()
+    {
+        // SelectionChanged fires while the XAML loads, before the rest of the window exists.
+        if (LiveBody is null || ScheduleBody is null || Battery is null)
+            return;
+
+        var schedule = _scheduleAvailable && ReferenceEquals(TabBar.SelectedItem, ScheduleTab);
+        LiveBody.Visibility = schedule ? Visibility.Collapsed : Visibility.Visible;
+        ScheduleBody.Visibility = schedule ? Visibility.Visible : Visibility.Collapsed;
+        SetAnimations(_animationsWanted);
+    }
+
+    private void TabBar_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args) =>
+        UpdateTab();
+
+    private void ScheduleBody_RefreshRequested(object? sender, EventArgs e) =>
+        ScheduleRefreshRequested?.Invoke(this, EventArgs.Empty);
+
     public void ShowDashboard()
     {
         if (!_placed || PinButton.IsChecked != true)
@@ -194,8 +235,11 @@ internal sealed partial class StatusWindow : Window
         _hiddenAt = DateTime.UtcNow;
     }
 
-    private void SetAnimations(bool enabled)
+    /// <summary>Animations run only while the dashboard is visible and the Live tab is showing.</summary>
+    private void SetAnimations(bool wanted)
     {
+        _animationsWanted = wanted;
+        var enabled = wanted && LiveBody.Visibility == Visibility.Visible;
         Battery.AnimationsEnabled = enabled;
         GridLine.AnimationsEnabled = enabled;
         BatteryLine.AnimationsEnabled = enabled;

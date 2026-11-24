@@ -27,6 +27,7 @@ internal sealed class ScheduleService : IDisposable
     private bool _busy;
     private bool _force = true;
     private bool _disposed;
+    private bool _wasActive;
     private DateTimeOffset _nextFetch = DateTimeOffset.MinValue;
     private DateTimeOffset _lastSaved = DateTimeOffset.MinValue;
 
@@ -98,15 +99,19 @@ internal sealed class ScheduleService : IDisposable
         var settings = _settings.Current;
         if (!settings.ScheduleActive)
         {
-            if (Error is not null)
+            // Tell the UI once that the schedule went away, so the flyout line and tab clear.
+            if (Error is not null || _wasActive)
             {
                 Error = null;
+                _wasActive = false;
                 _changed();
             }
 
             _force = true;
             return;
         }
+
+        _wasActive = true;
 
         var now = DateTimeOffset.Now;
         if (ScheduleOperator.Find(settings.ScheduleOperator) is not { } op)

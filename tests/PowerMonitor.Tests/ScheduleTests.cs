@@ -317,6 +317,101 @@ public class ScheduleTests
         Assert.Empty(ScheduleComparer.Compare(archive, [], At(12)).Rows);
     }
 
+    [Fact]
+    public void Schedule_tab_is_unavailable_without_a_selected_schedule()
+    {
+        var days = new[] { Applies(0, Out(2, 4)) };
+
+        Assert.False(SchedulePresentation.Create(new AppSettings(), days, At(1), null, null).Available);
+        Assert.False(SchedulePresentation.Create(Active() with { ScheduleEnabled = false }, days, At(1), null, null).Available);
+        Assert.False(SchedulePresentation.Create(Active() with { ScheduleGroup = "" }, days, At(1), null, null).Available);
+        Assert.True(SchedulePresentation.Create(Active(), days, At(1), null, null).Available);
+    }
+
+    [Fact]
+    public void Schedule_tab_places_outages_on_the_day_bar_and_marks_now_and_next()
+    {
+        var days = new[] { Applies(0, Out(6, 12), Out(18, 24)), Applies(1, Out(0, 3, 1)) };
+        var settings = Active() with { ScheduleAddressLabel = "вул. Хрещатик, 12" };
+
+        var tab = SchedulePresentation.Create(settings, days, At(7, 0), null, At(6, 45));
+
+        Assert.Contains("group 20.1", tab.Header);
+        Assert.StartsWith("Updated", tab.Updated);
+        Assert.Null(tab.Notice);
+        var today = tab.Days[0];
+        Assert.StartsWith("Today", today.Title);
+        Assert.Equal("Schedule applies", today.Status);
+        Assert.Equal(7.0 / 24, today.NowFraction!.Value, 6);
+        Assert.Equal(2, today.Segments.Count);
+        Assert.Equal(0.25, today.Segments[0].StartFraction, 6);
+        Assert.Equal(0.5, today.Segments[0].EndFraction, 6);
+        Assert.True(today.Segments[0].IsCurrent);
+        Assert.StartsWith("Now", today.Segments[0].Note);
+        Assert.StartsWith("Next", today.Segments[1].Note);
+        Assert.Equal("6 h 0 m", today.Segments[0].Duration);
+        Assert.Equal("Off 12 h 0 m in total", today.Total);
+
+        // 18:00–24:00 joins the next day's 00:00–03:00; each day shows only its own part.
+        Assert.Equal(1.0, today.Segments[1].EndFraction, 6);
+        var tomorrow = tab.Days[1];
+        Assert.Null(tomorrow.NowFraction);
+        var spill = Assert.Single(tomorrow.Segments);
+        Assert.Equal(0.0, spill.StartFraction, 6);
+        Assert.Equal(0.125, spill.EndFraction, 6);
+    }
+
+    [Fact]
+    public void Schedule_tab_reports_unpublished_empty_and_emergency_days()
+    {
+        var days = new[]
+        {
+            new DaySchedule(Day, null, DayStatus.NoOutages, []),
+            new DaySchedule(Day.AddDays(1), null, DayStatus.Emergency, [])
+        };
+
+        var tab = SchedulePresentation.Create(Active(), days, At(10), null, null);
+        Assert.Equal("No outages", tab.Days[0].Status);
+        Assert.Equal("", tab.Days[0].Total);
+        Assert.Equal("Emergency outages, no fixed hours", tab.Days[1].Status);
+
+        var unpublished = SchedulePresentation.Create(Active(), [days[0]], At(10), null, null);
+        Assert.Equal("Not published yet", unpublished.Days[1].Status);
+        Assert.Empty(unpublished.Days[1].Segments);
+    }
+
+    [Fact]
+    public void Schedule_tab_shows_possible_outages_without_counting_them_and_reports_notices()
+    {
+        var days = new[] { Applies(0, Out(10, 12), Out(14, 16, possible: true)) };
+
+        var tab = SchedulePresentation.Create(Active(), days, At(1), "offline", null);
+
+        Assert.Equal("Could not refresh: offline", tab.Notice);
+        Assert.True(tab.Days[0].Segments[1].Possible);
+        Assert.Equal("possible", tab.Days[0].Segments[1].Duration);
+        Assert.Null(tab.Days[0].Segments[1].Note);
+        Assert.Equal("Off 2 h 0 m in total", tab.Days[0].Total);
+        Assert.Equal("Waiting for the outage schedule", SchedulePresentation.Create(Active(), [], At(1), null, null).Notice);
+    }
+
+    [Fact]
+    public void Schedule_tab_bar_uses_the_real_length_of_a_clock_change_day()
+    {
+        // Kyiv leaves summer time on 2026-10-25, so that day lasts 25 hours.
+        var change = new DateOnly(2026, 10, 25);
+        var now = KyivTime.At(change, 60);
+        var outage = new ScheduledOutage(KyivTime.At(change, 0), KyivTime.At(change.AddDays(1), 0));
+        var days = new[] { new DaySchedule(change, null, DayStatus.Applies, [outage]) };
+
+        var tab = SchedulePresentation.Create(Active(), days, now, null, null);
+
+        var segment = Assert.Single(tab.Days[0].Segments);
+        Assert.Equal(0.0, segment.StartFraction, 6);
+        Assert.Equal(1.0, segment.EndFraction, 6);
+        Assert.InRange(tab.Days[0].NowFraction!.Value, 0.0, 1.0);
+    }
+
     private static string TempPath(string name) =>
         Path.Combine(Path.GetTempPath(), "power-monitor-tests", Guid.NewGuid().ToString("N"), name);
 }

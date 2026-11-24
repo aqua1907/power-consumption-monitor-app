@@ -76,6 +76,7 @@ public sealed partial class App : Application
             _status.LoadHistory(PowerHistoryStore.Load());
             _status.SettingsRequested += (_, _) => ShowSettings();
             _status.HistoryRequested += (_, _) => ShowHistory();
+            _status.ScheduleRefreshRequested += (_, _) => _schedule?.Kick();
             _status.NativeAppWindow.Closing += StatusClosing;
             _outages = OutageLogStore.Load();
 
@@ -304,6 +305,12 @@ public sealed partial class App : Application
         }
 
         _status?.ShowSchedule(line);
+        _status?.ShowScheduleTab(SchedulePresentation.Create(
+            settings,
+            days,
+            now,
+            _schedule.Error,
+            _schedule.LastFetched));
         // The tray tooltip picks this up with the next inverter reading.
         _scheduleBrief = brief;
         ShowComparison();

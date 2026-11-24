@@ -43,7 +43,7 @@ Settings are stored in `%AppData%\PowerMonitor\settings.json` on this PC and are
 For Kyiv (DTEK KEM), the app can read the stabilization outage schedule for your address. In Settings, under Outage schedule, turn it on, type your street and house number, and pick them from the suggestions. The app looks up your outage group and reads that group's schedule every 15 minutes.
 
 - A tray notification arrives a set number of minutes before each scheduled outage (30 by default) and again when it starts, with the time power is expected back. Another can announce a newly published or changed schedule.
-- The flyout shows one line with the current or next scheduled outage, and the tray tooltip adds it too.
+- The flyout shows one line with the current or next scheduled outage, and the tray tooltip adds it too. A Schedule tab next to Live shows today and tomorrow as 24-hour bars with the outage times, the current time, and what is next. The tab is greyed out until the feature is on and an address is chosen.
 - History has a Schedule vs actual section. It lines up each scheduled outage with the real outage the battery log recorded, and marks it on time, shifted (with how many minutes), did not happen, or not watched when this PC was off. Real outages that no schedule covers are listed as not scheduled.
 
 The operator publishes only today and tomorrow, so the app keeps the schedules it saw for 30 days in `%AppData%\PowerMonitor\schedule.json`, together with the times it was watching the grid. The street and house you type are sent to YASNO (`app.yasno.ua`) while you search; only the address label and the group are saved, in `settings.json` on this PC. Changing the address starts a new history.

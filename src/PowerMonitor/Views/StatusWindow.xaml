@@ -7,6 +7,7 @@
     <Grid x:Name="Root" KeyDown="Root_KeyDown">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -82,8 +83,29 @@
             </Button>
         </Grid>
 
-        <Grid
+        <SelectorBar
+            x:Name="TabBar"
             Grid.Row="1"
+            Margin="12,0,12,6"
+            SelectionChanged="TabBar_SelectionChanged">
+            <SelectorBarItem x:Name="LiveTab" IsSelected="True" Text="Live" />
+            <SelectorBarItem
+                x:Name="ScheduleTab"
+                IsEnabled="False"
+                Text="Schedule"
+                ToolTipService.ToolTip="Turn on Outage schedule in Settings and pick your address" />
+        </SelectorBar>
+
+        <controls:ScheduleView
+            x:Name="ScheduleBody"
+            Grid.Row="2"
+            Margin="12,0,12,12"
+            RefreshRequested="ScheduleBody_RefreshRequested"
+            Visibility="Collapsed" />
+
+        <Grid
+            x:Name="LiveBody"
+            Grid.Row="2"
             Padding="12,0,12,12"
             ColumnSpacing="8"
             RowSpacing="8">
